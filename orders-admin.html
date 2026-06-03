@@ -65,12 +65,16 @@
       const signoutBtn = document.getElementById("signout-btn");
       const listEl   = document.getElementById("orders-list");
 
-      let nameByEmail   = {};
+      let customerInfo  = {}; // { email: { name, office, address } }
       let activeEmails  = new Set();
       let blockedEmails = new Set();
       let lastOrders    = [];
       const DATES_PER_PAGE = 10;
       let datesPage = 0;
+
+      function normalizeOfficeName(office) {
+        return String(office || "").toLowerCase().replace(/\s+/g, "");
+      }
 
       function escape(s) {
         return String(s ?? "").replace(/[&<>"']/g, (c) => ({
@@ -87,7 +91,8 @@
         return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
       }
       function custLabel(email) {
-        const name = nameByEmail[(email || "").toLowerCase()];
+        const info = customerInfo[(email || "").toLowerCase()];
+        const name = info ? info.name : "";
         return name ? `${escape(name)} <span class="muted">· ${escape(email)}</span>` : escape(email);
       }
 
@@ -104,16 +109,34 @@
           listEl.innerHTML = '<p class="apps-empty">No orders.</p>';
           return;
         }
-        // Group by forDate, then within each date sum per-meal totals.
+
+        // Group by date, then by office (normalized), then by meal
         const byDate = {};
+        const officeDisplayNames = {}; // Track first original office name for each normalized key
+
         for (const o of live) {
           const key = o.forDate;
-          (byDate[key] = byDate[key] || []).push(o);
+          if (!byDate[key]) byDate[key] = {};
+          const info = customerInfo[(o.userEmail || "").toLowerCase()] || {};
+          const office = info.office || "—";
+          const normalizedOffice = normalizeOfficeName(office);
+          if (!byDate[key][normalizedOffice]) byDate[key][normalizedOffice] = [];
+          byDate[key][normalizedOffice].push(o);
+          if (!officeDisplayNames[normalizedOffice]) officeDisplayNames[normalizedOffice] = office;
         }
+
         const cancelledByDate = {};
         for (const o of cancelled) {
-          (cancelledByDate[o.forDate] = cancelledByDate[o.forDate] || []).push(o);
+          const key = o.forDate;
+          if (!cancelledByDate[key]) cancelledByDate[key] = {};
+          const info = customerInfo[(o.userEmail || "").toLowerCase()] || {};
+          const office = info.office || "—";
+          const normalizedOffice = normalizeOfficeName(office);
+          if (!cancelledByDate[key][normalizedOffice]) cancelledByDate[key][normalizedOffice] = [];
+          cancelledByDate[key][normalizedOffice].push(o);
+          if (!officeDisplayNames[normalizedOffice]) officeDisplayNames[normalizedOffice] = office;
         }
+
         const todayKey = toDateKey(startOfToday());
         const allKeys = Array.from(new Set([...Object.keys(byDate), ...Object.keys(cancelledByDate)])).sort();
         const totalPages = Math.max(1, Math.ceil(allKeys.length / DATES_PER_PAGE));
@@ -121,88 +144,122 @@
         if (datesPage < 0) datesPage = 0;
         const pageStart = datesPage * DATES_PER_PAGE;
         const pageKeys = allKeys.slice(pageStart, pageStart + DATES_PER_PAGE);
-        const cardsHTML = pageKeys.map((key) => {
-          const items = byDate[key] || [];
-          const cItems = cancelledByDate[key] || [];
 
-          // Group by meal: for each meal name, list customers who ordered it
-          // with their quantities.
-          const byMeal = {};
-          let grand = 0;
-          for (const o of items) {
-            grand += Number(o.total || 0);
-            for (const it of (o.items || [])) {
-              const k = it.name;
-              if (!byMeal[k]) byMeal[k] = { qty: 0, price: it.price, customers: [] };
-              byMeal[k].qty += Number(it.qty || 0);
-              byMeal[k].customers.push({ email: o.userEmail, qty: Number(it.qty || 0) });
+        const cardsHTML = pageKeys.map((key) => {
+          const datesByOffice = byDate[key] || {};
+          const cancelledDatesByOffice = cancelledByDate[key] || {};
+          const allOffices = Array.from(new Set([...Object.keys(datesByOffice), ...Object.keys(cancelledDatesByOffice)])).sort();
+
+          // Calculate totals for this date (across all offices)
+          let grandTotal = 0;
+          let totalMeals = 0;
+          let totalCustomers = 0;
+          const customerEmails = new Set();
+
+          for (const normalizedOffice of allOffices) {
+            const items = datesByOffice[normalizedOffice] || [];
+            for (const o of items) {
+              grandTotal += Number(o.total || 0);
+              customerEmails.add((o.userEmail || "").toLowerCase());
+              for (const it of (o.items || [])) {
+                totalMeals += Number(it.qty || 0);
+              }
             }
           }
-          // Same grouping for cancelled.
-          const byMealCancelled = {};
-          for (const o of cItems) {
-            for (const it of (o.items || [])) {
-              const k = it.name;
-              if (!byMealCancelled[k]) byMealCancelled[k] = { qty: 0, customers: [] };
-              byMealCancelled[k].qty += Number(it.qty || 0);
-              byMealCancelled[k].customers.push({ email: o.userEmail, qty: Number(it.qty || 0) });
+          totalCustomers = customerEmails.size;
+
+          // Build office sections within this date
+          const officeCardsHTML = allOffices.map((normalizedOffice) => {
+            const displayOffice = officeDisplayNames[normalizedOffice];
+            const items = datesByOffice[normalizedOffice] || [];
+            const cItems = cancelledDatesByOffice[normalizedOffice] || [];
+
+            // Group by meal
+            const byMeal = {};
+            let officeGrand = 0;
+            for (const o of items) {
+              officeGrand += Number(o.total || 0);
+              for (const it of (o.items || [])) {
+                const k = it.name;
+                if (!byMeal[k]) byMeal[k] = { qty: 0, price: it.price, customers: [] };
+                byMeal[k].qty += Number(it.qty || 0);
+                byMeal[k].customers.push({ email: o.userEmail, qty: Number(it.qty || 0) });
+              }
             }
-          }
+
+            const byMealCancelled = {};
+            for (const o of cItems) {
+              for (const it of (o.items || [])) {
+                const k = it.name;
+                if (!byMealCancelled[k]) byMealCancelled[k] = { qty: 0, customers: [] };
+                byMealCancelled[k].qty += Number(it.qty || 0);
+                byMealCancelled[k].customers.push({ email: o.userEmail, qty: Number(it.qty || 0) });
+              }
+            }
+
+            const officeMealQty = Object.values(byMeal).reduce((s, g) => s + g.qty, 0);
+
+            return `
+              <div class="office-section" style="margin-bottom: 16px; border-left: 3px solid var(--accent); padding-left: 12px;">
+                <h4 class="office-head" style="margin: 0 0 8px 0; font-size: 0.9em; font-weight: 600;">${escape(displayOffice)}</h4>
+                <div class="office-summary">
+                  ${Object.keys(byMeal).length ? `
+                    <ul class="meal-groups">
+                      ${Object.entries(byMeal).map(([name, g]) => `
+                        <li class="meal-group">
+                          <div class="meal-group-head">
+                            <strong class="meal-group-name">${escape(name)}</strong>
+                            <span class="meal-group-qty">× ${g.qty}</span>
+                          </div>
+                          <ul class="meal-group-customers">
+                            ${g.customers.map((c) => `
+                              <li>
+                                <span class="cust-email">${custLabel(c.email)}</span>
+                                <span class="cust-qty">× ${c.qty}</span>
+                              </li>
+                            `).join("")}
+                          </ul>
+                        </li>
+                      `).join("")}
+                    </ul>
+                  ` : '<p class="muted" style="margin:0;">No active orders.</p>'}
+                  ${cItems.length ? `
+                    <details class="cancelled-details">
+                      <summary>
+                        <span class="orders-subhead">Cancelled</span>
+                        <span class="status-chip is-rejected">${cItems.length}</span>
+                      </summary>
+                      <ul class="cancelled-list">
+                        ${cItems.map((o) => `
+                          <li>
+                            <span class="cust-email">${custLabel(o.userEmail)}</span>
+                            <span class="cust-qty">${(o.items || []).map((it) => `${escape(it.name)} × ${it.qty}`).join(", ")}</span>
+                          </li>
+                        `).join("")}
+                      </ul>
+                    </details>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+          }).join("");
 
           const stale = key < todayKey;
-          // Show both the customer count and total meal count so the
-          // header is unambiguous — "1 order" was confusing when that
-          // one customer had ordered several meals.
-          const mealQty = Object.values(byMeal).reduce((s, g) => s + g.qty, 0);
           return `
             <article class="app-card ${stale ? "is-stale" : ""}">
               <header class="app-card-head">
                 <h3 class="app-card-name">${formatDateLabel(dateFromKey(key))}</h3>
                 <div class="card-head-right">
-                  <span class="meal-price">${items.length} customer${items.length === 1 ? "" : "s"} · ${mealQty} meal${mealQty === 1 ? "" : "s"} · ${formatTk(grand)}</span>
+                  <span class="meal-price">${totalCustomers} customer${totalCustomers === 1 ? "" : "s"} · ${totalMeals} meal${totalMeals === 1 ? "" : "s"} · ${formatTk(grandTotal)}</span>
                 </div>
               </header>
               <div class="orders-summary">
-                ${Object.keys(byMeal).length ? `
-                  <ul class="meal-groups">
-                    ${Object.entries(byMeal).map(([name, g]) => `
-                      <li class="meal-group">
-                        <div class="meal-group-head">
-                          <strong class="meal-group-name">${escape(name)}</strong>
-                          <span class="meal-group-qty">× ${g.qty}</span>
-                        </div>
-                        <ul class="meal-group-customers">
-                          ${g.customers.map((c) => `
-                            <li>
-                              <span class="cust-email">${custLabel(c.email)}</span>
-                              <span class="cust-qty">× ${c.qty}</span>
-                            </li>
-                          `).join("")}
-                        </ul>
-                      </li>
-                    `).join("")}
-                  </ul>
-                ` : '<p class="muted" style="margin:0;">No active orders for this date.</p>'}
-                ${cItems.length ? `
-                  <details class="cancelled-details">
-                    <summary>
-                      <span class="orders-subhead">Cancelled</span>
-                      <span class="status-chip is-rejected">${cItems.length}</span>
-                    </summary>
-                    <ul class="cancelled-list">
-                      ${cItems.map((o) => `
-                        <li>
-                          <span class="cust-email">${custLabel(o.userEmail)}</span>
-                          <span class="cust-qty">${(o.items || []).map((it) => `${escape(it.name)} \u00d7 ${it.qty}`).join(", ")}</span>
-                        </li>
-                      `).join("")}
-                    </ul>
-                  </details>
-                ` : ''}
+                ${officeCardsHTML}
               </div>
             </article>
           `;
         }).join("");
+
         const pager = allKeys.length > DATES_PER_PAGE
           ? `<div class="wallet-pager">
               <button type="button" class="ghost-btn" data-pager="prev"${datesPage === 0 ? " disabled" : ""}>◀ Prev</button>
@@ -227,20 +284,24 @@
           await show404(); return;
         }
         whoEmail.textContent = user.email;
-        subtitle.textContent = "Today and upcoming orders, grouped by date.";
+        subtitle.textContent = "Today and upcoming orders, grouped by date and office.";
         view.hidden = false;
         mountNotificationBell({ user });
 
         try {
           const snap = await getDocs(collection(db, "applications"));
-          nameByEmail = {};
+          customerInfo = {};
           activeEmails = new Set();
           blockedEmails = new Set();
           snap.docs.forEach((d) => {
             const a = d.data();
             if (a && a.email) {
               const key = String(a.email).toLowerCase();
-              nameByEmail[key] = a.name || "";
+              customerInfo[key] = {
+                name: a.name || "",
+                office: a.office || "—",
+                address: a.address || ""
+              };
               // Block orders only for explicitly blocking statuses.
               // Missing doc / approved → allowed.
               if (a.status === "banned" || a.status === "rejected" || a.status === "pending") {
@@ -263,7 +324,7 @@
                 const key = (o.userEmail || "").toLowerCase();
                 // Hide if explicitly blocked OR if the application
                 // record no longer exists (user was deleted / disabled).
-                return !blockedEmails.has(key) && (key in nameByEmail);
+                return !blockedEmails.has(key) && (key in customerInfo);
               });
             render(items);
           },

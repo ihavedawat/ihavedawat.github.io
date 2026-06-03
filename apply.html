@@ -110,10 +110,10 @@
         onAuthStateChanged
       } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
       import { notifyAdmins } from "./notifications.js";
+      import { ADMIN_EMAILS } from "./admin-config.js";
 
       // If someone is already signed in, they shouldn't see the apply page.
       // Admin → admin console. Approved customer → dashboard.
-      const ADMIN_EMAILS = ["igotdawat@gmail.com"];
       onAuthStateChanged(auth, (user) => {
         if (!user) return;
         if (ADMIN_EMAILS.includes((user.email || "").toLowerCase())) {

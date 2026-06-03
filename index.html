@@ -67,7 +67,7 @@
 
       // Admin emails should never end up on the customer dashboard — bounce
       // them to applications.html instead. Keep this list in sync with admin-view.js.
-      const ADMIN_EMAILS = ["igotdawat@gmail.com"];
+      import { ADMIN_EMAILS } from "./admin-config.js";
 
       const form   = document.getElementById("login-form");
       const status = document.getElementById("login-status");

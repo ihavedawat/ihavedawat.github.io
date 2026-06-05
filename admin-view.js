@@ -354,7 +354,7 @@ function cardHTML(app) {
         <a class="head-link" target="_blank" rel="noopener"
            href="${FIREBASE_AUTH_CONSOLE}"
            title="Create the user account">+ Add User</a>
-        <a class="head-link" target="_blank" rel="noopener" href="${mailto}" title="Email credentials via Gmail">✉ Email</a>`;
+        <a class="head-link" target="_blank" rel="noopener" href="${mailto}" title="Send credentials via Gmail">✉ Email</a>`;
       actions = `
         <button type="button" class="btn-delete"  data-action="delete"      data-id="${app.id}">🗑 Delete</button>
         <button type="button" class="btn-move"    data-action="to-pending"  data-id="${app.id}">↶ Move to Pending</button>

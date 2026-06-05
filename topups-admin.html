@@ -80,16 +80,28 @@
       const namesByEmail = {};
       const TOPUPS_PER_PAGE = 10;
       let topupsPage = 0;
+      const filterCounts = { pending: 0, confirmed: 0, rejected: 0 };
+      const FILTER_LABELS = {
+        pending: "Pending",
+        confirmed: "Confirmed",
+        rejected: "Declined"
+      };
+
+      function syncPills() {
+        pills.forEach((x) => {
+          const filter = x.dataset.filter;
+          const on = filter === currentFilter;
+          x.classList.toggle("is-active", on);
+          x.setAttribute("aria-selected", on ? "true" : "false");
+          x.textContent = FILTER_LABELS[filter] + " (" + (filterCounts[filter] || 0) + ")";
+        });
+      }
 
       function setFilter(name) {
         if (name !== "pending" && name !== "confirmed" && name !== "rejected") name = "pending";
         currentFilter = name;
         topupsPage = 0;
-        pills.forEach((x) => {
-          const on = x.dataset.filter === name;
-          x.classList.toggle("is-active", on);
-          x.setAttribute("aria-selected", on ? "true" : "false");
-        });
+        syncPills();
         render();
       }
 
@@ -121,6 +133,17 @@
       });
 
       function render() {
+        filterCounts.pending   = 0;
+        filterCounts.confirmed = 0;
+        filterCounts.rejected  = 0;
+        allRows.forEach((r) => {
+          const status = (r.status || "pending");
+          if (status === "pending" || status === "confirmed" || status === "rejected") {
+            filterCounts[status] += 1;
+          }
+        });
+        syncPills();
+
         const rows = allRows.filter((r) => (r.status || "pending") === currentFilter);
         if (!rows.length) {
           const empty = currentFilter === "rejected" ? "declined" : currentFilter;

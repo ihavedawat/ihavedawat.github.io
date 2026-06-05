@@ -26,7 +26,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { mountNotificationBell } from "./notifications.js";
 import { confirmDialog, typeToConfirmDialog, alertDialog, passwordConfirmDialog } from "./modal.js";
-import { show404 } from "./app-utils.js";
+import { show404, formatTk } from "./app-utils.js";
+import { getBalance } from "./wallet.js";
 
 // Verify the currently-signed-in admin's password. Used to gate the
 // most destructive actions (Wipe data, Clear all). Returns true on
@@ -89,7 +90,36 @@ let currentItems    = [];
 const APPS_PER_PAGE = 10;
 let appsPage        = 0;
 const filterCounts  = {}; // Track counts for each filter
+const walletBalancesById = {}; // Cache user wallet balances by UID
+const walletBalancesByEmail = {}; // Fallback cache when UID is missing
 let unsubscribers   = []; // Track all subscriptions for cleanup
+
+async function getWalletBalanceByEmail(email) {
+  const key = String(email || "").trim().toLowerCase();
+  if (!key) return 0;
+  if (key in walletBalancesByEmail) return walletBalancesByEmail[key];
+  const walletSnap = await getDocs(query(collection(db, "wallets"), where("email", "==", key)));
+  const balance = walletSnap.docs.length
+    ? Number(walletSnap.docs[0].data().balance || 0)
+    : 0;
+  walletBalancesByEmail[key] = balance;
+  return balance;
+}
+
+async function loadWalletBalancesForPage(items) {
+  const ids = [...new Set(items.map((a) => a.userId).filter(Boolean))];
+  const emails = [...new Set(items.map((a) => String(a.email || "").trim().toLowerCase()).filter(Boolean))];
+  await Promise.all([
+    ...ids.map(async (userId) => {
+      walletBalancesById[userId] = await getBalance(userId);
+    }),
+    ...emails.map(async (email) => {
+      if (!(email in walletBalancesByEmail)) {
+        walletBalancesByEmail[email] = await getWalletBalanceByEmail(email);
+      }
+    })
+  ]);
+}
 
 function syncPills() {
   pills.forEach((pill) => {
@@ -249,7 +279,7 @@ function subscribeToApplications(filter) {
   );
 }
 
-function renderList(items) {
+async function renderList(items) {
   if (!items.length) {
     listEl.innerHTML =
       '<p class="apps-empty">No ' + currentFilter + ' applications.</p>';
@@ -260,6 +290,13 @@ function renderList(items) {
   if (appsPage < 0) appsPage = 0;
   const start = appsPage * APPS_PER_PAGE;
   const pageItems = items.slice(start, start + APPS_PER_PAGE);
+  if ((currentFilter === "customer" || currentFilter === "banned") && pageItems.length > 0) {
+    try {
+      await loadWalletBalancesForPage(pageItems);
+    } catch (err) {
+      console.error("Failed to load wallet balances:", err);
+    }
+  }
   const cardsHTML = pageItems.map(cardHTML).join("");
   const pager = items.length > APPS_PER_PAGE
     ? `<div class="wallet-pager">
@@ -370,7 +407,7 @@ function cardHTML(app) {
   const pwEscaped = escape(app.issuedPassword || "");
   const pwLen = (app.issuedPassword || "").length;
   const mask = "•".repeat(pwLen);
-  const passwordRow = ((currentFilter === "approved" || currentFilter === "customer" || currentFilter === "banned") && app.issuedPassword)
+  const passwordRow = (currentFilter === "approved" && app.issuedPassword)
     ? `<dt>Password</dt>
        <dd class="pw-cell">
          <span class="pw-wrap">
@@ -382,10 +419,17 @@ function cardHTML(app) {
          </span>
        </dd>`
     : "";
+  const emailKey = String(app.email || "").trim().toLowerCase();
+  const walletBalance = (app.userId && walletBalancesById[app.userId] != null)
+    ? walletBalancesById[app.userId]
+    : walletBalancesByEmail[emailKey];
+  const walletLabel = ((currentFilter === "customer" || currentFilter === "banned") && (app.userId || emailKey))
+    ? ` <span class="card-wallet">Balance: ${formatTk(walletBalance ?? 0)}</span>`
+    : "";
   return `
     <article class="app-card" data-id="${app.id}" data-email="${escape((app.email || "").toLowerCase())}">
       <header class="card-head">
-        <span class="card-name">${escape(app.name || "(no name)")}</span>
+        <span class="card-name">${escape(app.name || "(no name)")}</span>${walletLabel}
         <div class="card-head-right">
           ${headerExtras}
           ${currentFilter === "customer" ? "" : `<span class="card-status status-${app.status}">${app.status}</span>`}

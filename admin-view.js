@@ -88,12 +88,17 @@ let unsubscribeList = null;
 let currentItems    = [];
 const APPS_PER_PAGE = 10;
 let appsPage        = 0;
+const filterCounts  = {}; // Track counts for each filter
+let unsubscribers   = []; // Track all subscriptions for cleanup
 
 function syncPills() {
   pills.forEach((pill) => {
-    const active = pill.dataset.filter === currentFilter;
+    const filter = pill.dataset.filter;
+    const count = filterCounts[filter] || 0;
+    const active = filter === currentFilter;
     pill.classList.toggle("is-active", active);
     pill.setAttribute("aria-selected", active ? "true" : "false");
+    pill.textContent = filter.charAt(0).toUpperCase() + filter.slice(1) + " (" + count + ")";
   });
 }
 
@@ -109,6 +114,12 @@ function writeHash() {
 
 syncPills();
 writeHash();
+
+// Initialize count display (will be updated by subscriptions)
+FILTERS.forEach(f => {
+  filterCounts[f] = 0;
+});
+syncPills();
 
 // ----- Sign out -----
 signoutBtn.addEventListener("click", async () => {
@@ -170,6 +181,35 @@ window.addEventListener("hashchange", () => {
 function subscribeToApplications(filter) {
   if (unsubscribeList) unsubscribeList();
   listEl.innerHTML = '<p class="apps-empty">Loading<span class="loading-dots"><span></span><span></span><span></span></span></p>';
+  
+  // Subscribe to all filters for count tracking
+  unsubscribers.forEach(unsub => unsub());
+  unsubscribers = [];
+  
+  FILTERS.forEach(f => {
+    const statusForQuery = (f === "customer") ? "approved" : f;
+    const q = query(
+      collection(db, "applications"),
+      where("status", "==", statusForQuery)
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        let items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        if (f === "approved") {
+          items = items.filter((a) => !a.credsIssued || a.mustChangePassword !== false);
+        } else if (f === "customer") {
+          items = items.filter((a) => !!a.credsIssued && a.mustChangePassword === false);
+        }
+        filterCounts[f] = items.length;
+        syncPills();
+      },
+      (err) => console.error("Error counting " + f + ":", err)
+    );
+    unsubscribers.push(unsub);
+  });
+
+  // Now subscribe to the current filter for display
   const statusForQuery = (filter === "customer") ? "approved" : filter;
   const q = query(
     collection(db, "applications"),

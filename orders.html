@@ -95,7 +95,7 @@
 
       function renderSummary(o) {
         return `
-          <article class="app-card" data-order-id="${o.id}">
+          <article class="app-card ${pastCutoff(o.forDate) ? 'is-stale' : ''}" data-order-id="${o.id}">
             <header class="app-card-head">
               <h3 class="app-card-name">${formatDateLabel(dateFromKey(o.forDate))}</h3>
               <div class="card-head-right">

@@ -129,6 +129,25 @@ export function formatTk(n) {
   return "৳" + Number(n || 0).toLocaleString("en-IN");
 }
 
+// Get the date key for which orders should be displayed in normal color.
+// Before opening hour: today's orders are active.
+// After opening hour: tomorrow's orders are active.
+export function getActiveOrderDateKey(now = new Date()) {
+  const today = startOfToday();
+  const todayKey = toDateKey(today);
+  
+  // Check if we've passed opening hour
+  if (now.getHours() < ORDER_CONFIG.OPEN_HOUR || 
+      (now.getHours() === ORDER_CONFIG.OPEN_HOUR && now.getMinutes() < ORDER_CONFIG.OPEN_MINUTE)) {
+    // Before opening hour: today's orders are active
+    return todayKey;
+  }
+  // After opening hour: tomorrow's orders are active
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return toDateKey(tomorrow);
+}
+
 // ----- Weekday helpers -----
 // We store the menu as a single weeklyMenu/main document keyed by weekday.
 // Display order starts on Saturday because the BD work week typically

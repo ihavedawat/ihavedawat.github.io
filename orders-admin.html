@@ -54,7 +54,7 @@
       import {
         collection, onSnapshot, query, orderBy, getDocs
       } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-      import { formatTk, formatDateLabel, toDateKey, startOfToday } from "./app-utils.js";
+      import { formatTk, formatDateLabel, toDateKey, startOfToday, getActiveOrderDateKey } from "./app-utils.js";
       import { mountNotificationBell } from "./notifications.js";
       import { show404 } from "./app-utils.js";
       import { ADMIN_EMAILS } from "./admin-config.js";
@@ -137,8 +137,8 @@
           if (!officeDisplayNames[normalizedOffice]) officeDisplayNames[normalizedOffice] = office;
         }
 
-        const todayKey = toDateKey(startOfToday());
-        const allKeys = Array.from(new Set([...Object.keys(byDate), ...Object.keys(cancelledByDate)])).sort();
+        const activeKey = getActiveOrderDateKey();
+        const allKeys = Array.from(new Set([...Object.keys(byDate), ...Object.keys(cancelledByDate)])).sort().reverse();
         const totalPages = Math.max(1, Math.ceil(allKeys.length / DATES_PER_PAGE));
         if (datesPage >= totalPages) datesPage = totalPages - 1;
         if (datesPage < 0) datesPage = 0;
@@ -244,7 +244,7 @@
             `;
           }).join("");
 
-          const stale = key < todayKey;
+          const stale = key !== activeKey;
           return `
             <article class="app-card ${stale ? "is-stale" : ""}">
               <header class="app-card-head">

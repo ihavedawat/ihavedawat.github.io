@@ -49,38 +49,39 @@ service cloud.firestore {
     }
 
     // ===== WALLETS (keyed by userId) =====
-    // SECURITY CRITICAL: Users can only READ their own wallet balance.
-    // ALL wallet modifications must go through Cloud Functions.
-    // Admins can update for manual adjustments (confirmed topups, corrections).
+    // SECURITY CRITICAL: Only Vercel API can UPDATE wallets (via Firebase Admin SDK)
+    // Users can READ their own wallet balance
+    // Admins can UPDATE for manual adjustments (confirmed topups, corrections)
     match /wallets/{userId} {
       // Users can only read their own wallet
       allow read: if request.auth != null && request.auth.uid == userId;
-      
+
       // Admins can read all wallets for monitoring
       allow read: if request.auth != null && isAdmin(request.auth.token.email);
-      
+
       // Admins can update wallets for topup confirmations and manual adjustments
       allow update: if request.auth != null && isAdmin(request.auth.token.email);
-      
-      // DENY all other writes
+
+      // DENY all client-side writes (only Vercel API can update via server context)
       allow create: if false;
       allow delete: if false;
     }
 
     // ===== WALLET HISTORY =====
-    // SECURITY CRITICAL: Users can only READ transaction history.
-    // ALL transaction entries must be created by Cloud Functions or admins.
+    // SECURITY CRITICAL: Only Vercel API can CREATE entries (via server context)
+    // Users can READ their own transaction history
+    // Admins can also create history entries for manual adjustments
     match /walletHistory/{document=**} {
       // Users can read their own transaction history
-      allow read: if request.auth != null && 
-        (request.auth.uid == resource.data.userId || 
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.userId ||
          request.auth.token.email == resource.data.userEmail ||
          isAdmin(request.auth.token.email));
-      
+
       // Admins can create history entries (for manual adjustments, topup confirmations)
       allow create: if request.auth != null && isAdmin(request.auth.token.email);
-      
-      // DENY all other writes
+
+      // DENY all client-side writes (only Vercel API can create via server context)
       allow write: if false;
     }
 

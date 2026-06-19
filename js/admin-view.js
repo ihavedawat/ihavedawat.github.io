@@ -461,7 +461,7 @@ function cardHTML(app) {
     ? ` <span class="card-balance" ${app.userId ? `data-user-id="${app.userId}"` : `data-email="${emailKey}"`}>(${formatTk(walletBalance ?? 0)})</span>`
     : "";
   return `
-    <article class="app-card" data-id="${app.id}" data-email="${escape((app.email || "").toLowerCase())}" data-name="${escape(app.name || "(no name)")}">
+    <article class="app-card" data-id="${app.id}" data-email="${escape((app.email || "").toLowerCase())}" data-user-id="${escape(app.userId || "")}" data-name="${escape(app.name || "(no name)")}"">
       <header class="card-head">
         <span class="card-name">${escape(app.name || "(no name)")}${walletLabel}</span>
         <div class="card-head-right">
@@ -723,6 +723,7 @@ async function handleAction(id, action, btn) {
   if (action === "delete") {
     const name = card.querySelector(".card-name").textContent;
     const email = card.dataset.email || "";
+    const userId = card.dataset.userId || "";
     const ok = await passwordConfirmDialog({
       title: "Delete application",
       message:
@@ -742,7 +743,7 @@ async function handleAction(id, action, btn) {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email: email || undefined, userId: userId || undefined })
       });
       if (!response.ok) {
         const data = await response.json();
@@ -764,6 +765,7 @@ async function handleAction(id, action, btn) {
   if (action === "wipe-data") {
     const name = card.dataset.name;
     const email = card.dataset.email || "";
+    const userId = card.dataset.userId || "";
     const ok = await passwordConfirmDialog({
       title: "Wipe data for " + name,
       message:
@@ -784,7 +786,7 @@ async function handleAction(id, action, btn) {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email: email || undefined, userId: userId || undefined })
       });
       if (!response.ok) {
         const data = await response.json();

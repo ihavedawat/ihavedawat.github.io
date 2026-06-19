@@ -24,10 +24,20 @@ export default async function handler(req, res) {
   }
 
   const adminEmail = decodedToken.email;
-  const { email } = req.body;
+  let { email, userId } = req.body;
 
   if (!ADMIN_EMAILS.map(e => e.toLowerCase()).includes((adminEmail || '').toLowerCase())) {
     return res.status(403).json({ error: 'Not authorized' });
+  }
+
+  // If userId is provided but no email, look it up from Firebase Auth
+  if (userId && !email) {
+    try {
+      const userRecord = await admin.auth().getUser(userId);
+      email = userRecord.email;
+    } catch (err) {
+      return res.status(400).json({ error: 'User not found' });
+    }
   }
 
   if (!email) {

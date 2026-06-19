@@ -61,7 +61,7 @@
       import { mountNotificationBell, notifyAdmins } from "./js/notifications.js";
       import { confirmDialog, alertDialog } from "./js/modal.js";
       import { subscribeWallet, getBalance } from "./js/wallet.js";
-      import { secureRefundForOrder } from "./js/wallet-secure.js";
+      import { secureDebitForOrder, secureRefundForOrder } from "./js/wallet-secure.js";
       import { ADMIN_EMAILS } from "./js/admin-config.js";
       import { escape } from "./js/admin-helpers.js";
 
@@ -283,26 +283,40 @@
 
             if (diff !== 0) {
               try {
-                // Adjust wallet: refund old total, debit new total via secure API
-                if (diff > 0) {
-                  // Price increased - debit the difference
-                  await secureDebitForOrder({
-                    userId: auth.currentUser.uid,
-                    userEmail: email,
-                    amount: diff,
-                    orderId: o.id,
-                    note: "Order edit (price increased) for " + o.forDate
-                  });
-                } else {
-                  // Price decreased - refund the difference
-                  await secureRefundForOrder({
-                    userId: auth.currentUser.uid,
-                    userEmail: email,
-                    amount: -diff,
-                    orderId: o.id,
-                    note: "Order edit (price decreased) for " + o.forDate
-                  });
+                // Find and update the existing walletHistory entry
+                const histSnap = await getDocs(
+                  query(collection(db, "walletHistory"),
+                    where("userId", "==", auth.currentUser.uid),
+                    where("ref", "==", o.id))
+                );
+                if (histSnap.empty) {
+                  throw new Error("Wallet history entry not found for order " + o.id);
                 }
+                const histDocId = histSnap.docs[0].id;
+                const histData = histSnap.docs[0].data();
+                const newDebitAmount = -total;
+
+                // Update wallet balance and history in a transaction
+                await runTransaction(db, async (tx) => {
+                  const walletRef = doc(db, "wallets", auth.currentUser.uid);
+                  const wSnap = await tx.get(walletRef);
+                  const currentBalance = wSnap.exists() ? Number(wSnap.data().balance || 0) : 0;
+                  const newBalance = currentBalance - diff;
+
+                  // Update wallet
+                  tx.update(walletRef, {
+                    balance: newBalance,
+                    updatedAt: serverTimestamp()
+                  });
+
+                  // Update walletHistory entry
+                  tx.update(doc(db, "walletHistory", histDocId), {
+                    amount: newDebitAmount,
+                    balanceAfter: newBalance,
+                    note: "Order (edited)",
+                    updatedAt: serverTimestamp()
+                  });
+                });
               } catch (walletErr) {
                 console.error("Wallet update failed:", walletErr);
               }
@@ -396,7 +410,7 @@
                   userEmail: email,
                   amount: Number(cancelledOrder.total),
                   orderId: cancelledOrder.id,
-                  note: "Order cancelled for " + cancelledOrder.forDate
+                  note: "Refund · Order (cancelled)"
                 });
               } catch (walletErr) {
                 console.error("Wallet refund failed:", walletErr);

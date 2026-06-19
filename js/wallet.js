@@ -21,61 +21,11 @@ export async function getBalance(userId) {
   return snap.exists() ? Number(snap.data().balance || 0) : 0;
 }
 
-// Debit wallet for order placement. Uses transaction to prevent double-charge.
-// Throws "INSUFFICIENT_FUNDS" if balance < amount
-export async function debitForOrder({ userId, userEmail, amount, orderId, note }) {
-  return runTransaction(db, async (tx) => {
-    const walletRef = doc(db, "wallets", userId);
-    const wSnap = await tx.get(walletRef);
-    const current = wSnap.exists() ? Number(wSnap.data().balance || 0) : 0;
-    if (current < amount) throw new Error("INSUFFICIENT_FUNDS");
-    const next = current - amount;
-    tx.set(walletRef, {
-      balance: next,
-      email: userEmail,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-    const txnRef = doc(collection(db, "walletHistory"));
-    tx.set(txnRef, {
-      userId, userEmail,
-      type: "order_debit",
-      amount: -amount,
-      balanceAfter: next,
-      ref: orderId || null,
-      note: note || "",
-      createdAt: serverTimestamp()
-    });
-    return next;
-  });
-}
+// DEPRECATED: Use secureDebitForOrder from wallet-secure.js instead
+// That function calls the Vercel API endpoint for server-side validation
 
-// Credit wallet (type: "order_refund" | "topup" | "manual_adjustment")
-// Uses transaction for consistency
-export async function creditWallet({ userId, userEmail, amount, type, ref, note, byAdmin }) {
-  return runTransaction(db, async (tx) => {
-    const walletRef = doc(db, "wallets", userId);
-    const wSnap = await tx.get(walletRef);
-    const current = wSnap.exists() ? Number(wSnap.data().balance || 0) : 0;
-    const next = current + amount;
-    tx.set(walletRef, {
-      balance: next,
-      email: userEmail,
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-    const txnRef = doc(collection(db, "walletHistory"));
-    tx.set(txnRef, {
-      userId, userEmail,
-      type,
-      amount,
-      balanceAfter: next,
-      ref: ref || null,
-      note: note || "",
-      byAdmin: byAdmin || null,
-      createdAt: serverTimestamp()
-    });
-    return next;
-  });
-}
+// DEPRECATED: Use secureRefundForOrder from wallet-secure.js instead
+// That function calls the Vercel API endpoint for server-side validation
 
 // User submits topup request after sending money to bank
 export async function requestTopup({ userId, userEmail, amount, bankRef, note }) {

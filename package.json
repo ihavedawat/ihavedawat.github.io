@@ -4,7 +4,6 @@
   "description": "Dawat - Order management system",
   "type": "module",
   "scripts": {
-    "dev": "vercel dev",
     "build": "vercel build"
   },
   "dependencies": {

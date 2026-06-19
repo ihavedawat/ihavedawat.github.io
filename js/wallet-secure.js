@@ -5,9 +5,7 @@
 import { auth } from "./firebase.js";
 
 // Get the Vercel API base URL (changes based on environment)
-const API_BASE = window.location.origin.includes('localhost')
-  ? 'http://localhost:3000'  // Local dev
-  : window.location.origin;    // Production (same domain)
+const API_BASE = window.location.origin;  // Always use same origin (localhost:9000 in dev, vercel domain in prod)
 
 /**
  * Secure wallet debit for order placement

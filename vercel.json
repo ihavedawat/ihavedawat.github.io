@@ -1,5 +1,21 @@
 {
   "buildCommand": "",
   "outputDirectory": ".",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "rewrites": [
+    { "source": "/menu", "destination": "/menu.html" },
+    { "source": "/orders", "destination": "/orders.html" },
+    { "source": "/wallet", "destination": "/wallet.html" },
+    { "source": "/settings", "destination": "/settings.html" },
+    { "source": "/users", "destination": "/users.html" },
+    { "source": "/apply", "destination": "/apply.html" },
+    { "source": "/meals", "destination": "/meals.html" },
+    { "source": "/applications", "destination": "/applications.html" },
+    { "source": "/menu-admin", "destination": "/menu-admin.html" },
+    { "source": "/orders-admin", "destination": "/orders-admin.html" },
+    { "source": "/settings-admin", "destination": "/settings-admin.html" },
+    { "source": "/topups-admin", "destination": "/topups-admin.html" }
+  ],
+  "cleanUrls": true,
+  "trailingSlash": false
 }

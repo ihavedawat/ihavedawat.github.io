@@ -3,9 +3,7 @@
   "version": "1.0.0",
   "description": "Dawat - Order management system",
   "type": "module",
-  "scripts": {
-    "build": "vercel build"
-  },
+  "scripts": {},
   "dependencies": {
     "firebase-admin": "^12.0.0"
   }

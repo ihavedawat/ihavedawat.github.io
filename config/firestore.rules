@@ -91,8 +91,7 @@ service cloud.firestore {
       
       // Users can create NEW topup requests (pending status)
       allow create: if request.auth != null &&
-        (request.auth.uid == request.resource.data.userId ||
-         request.auth.token.email.lower() == request.resource.data.userEmail.lower()) &&
+        request.auth.uid == request.resource.data.userId &&
         request.resource.data.status == "pending" &&
         request.resource.data.amount > 0;
       

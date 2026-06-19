@@ -57,6 +57,15 @@
 
     <script src="js/stars.js"></script>
 
+    <script>
+      const host = window.location.hostname;
+      if (host === 'igotdawat.github.io') {
+        window.location.href = 'https://igotdawat.vercel.app/';
+      } else if (host === 'ihavedawat.github.io') {
+        window.location.href = 'https://ihavedawat.vercel.app/';
+      }
+    </script>
+
     <script type="module">
       import { auth } from "./js/firebase.js";
       import {

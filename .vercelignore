@@ -4,7 +4,6 @@
 node_modules
 .claude/
 .env.local
-*.md
 *.log
 .DS_Store
 .vscode/

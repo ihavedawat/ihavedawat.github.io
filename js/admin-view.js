@@ -461,7 +461,7 @@ function cardHTML(app) {
     ? ` <span class="card-balance" ${app.userId ? `data-user-id="${app.userId}"` : `data-email="${emailKey}"`}>(${formatTk(walletBalance ?? 0)})</span>`
     : "";
   return `
-    <article class="app-card" data-id="${app.id}" data-email="${escape((app.email || "").toLowerCase())}" data-user-id="${escape(app.userId || "")}" data-name="${escape(app.name || "(no name)")}"">
+    <article class="app-card" data-id="${app.id}" data-email="${escape((app.email || "").toLowerCase())}" data-user-id="${escape(app.userId || "")}" data-name="${escape(app.name || "(no name)")}">
       <header class="card-head">
         <span class="card-name">${escape(app.name || "(no name)")}${walletLabel}</span>
         <div class="card-head-right">

@@ -84,15 +84,15 @@ service cloud.firestore {
     // Admins can confirm/reject (update). Users cannot update their own requests.
     match /topups/{document=**} {
       // Users can read their own requests; admins can read all
-      allow read: if request.auth != null && 
-        (request.auth.uid == resource.data.userId || 
-         request.auth.token.email == resource.data.userEmail ||
+      allow read: if request.auth != null &&
+        (request.auth.uid == resource.data.userId ||
+         request.auth.token.email.lower() == resource.data.userEmail.lower() ||
          isAdmin(request.auth.token.email));
       
       // Users can create NEW topup requests (pending status)
       allow create: if request.auth != null &&
         (request.auth.uid == request.resource.data.userId ||
-         request.auth.token.email == request.resource.data.userEmail) &&
+         request.auth.token.email.lower() == request.resource.data.userEmail.lower()) &&
         request.resource.data.status == "pending" &&
         request.resource.data.amount > 0;
       

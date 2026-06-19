@@ -122,8 +122,10 @@ service cloud.firestore {
          (request.auth.uid == resource.data.userId &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read"])));
 
-      // Only admins can delete
-      allow delete: if request.auth != null && isAdmin(request.auth.token.email);
+      // Users can delete their own notifications, admins can delete any
+      allow delete: if request.auth != null &&
+        (isAdmin(request.auth.token.email) ||
+         request.auth.uid == resource.data.userId);
     }
 
     // ===== ADMIN OPERATIONS (audit trail) =====

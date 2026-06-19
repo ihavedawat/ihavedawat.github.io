@@ -1,4 +1,4 @@
-// Admin purge functions: delete user data (wallets, orders, history, topups, notifications)
+// Admin helpers: utility functions for admin operations
 // Used by settings-admin.html and admin-view.js
 
 import { db } from "./firebase.js";
@@ -10,6 +10,25 @@ import {
   deleteDoc,
   writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+export function escape(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export async function purgeOrdersForEmail(email) {
+  const e = String(email || "").toLowerCase();
+  if (!e) return;
+  const snap = await getDocs(query(collection(db, "orders"), where("userEmail", "==", e)));
+  if (snap.empty) return;
+  const batch = writeBatch(db);
+  snap.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+}
 
 export async function purgeAllUserDataForEmail(email) {
   const e = String(email || "").toLowerCase();

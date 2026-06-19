@@ -28,6 +28,7 @@ import { mountNotificationBell } from "./notifications.js";
 import { confirmDialog, typeToConfirmDialog, alertDialog, passwordConfirmDialog } from "./modal.js";
 import { show404, formatTk } from "./app-utils.js";
 import { getBalance, subscribeWallet } from "./wallet.js";
+import { escape, purgeOrdersForEmail, purgeAllUserDataForEmail } from "./admin-helpers.js";
 
 // Verify the currently-signed-in admin's password. Used to gate the
 // most destructive actions (Wipe data, Clear all). Returns true on
@@ -509,73 +510,6 @@ function gmailHref(app, kind) {
     "&body=" + encodeURIComponent(bodyText);
 }
 
-function escape(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-async function purgeOrdersForEmail(email) {
-  const e = String(email || "").toLowerCase();
-  if (!e) return;
-  const snap = await getDocs(query(collection(db, "orders"), where("userEmail", "==", e)));
-  if (snap.empty) return;
-  const batch = writeBatch(db);
-  snap.docs.forEach((d) => batch.delete(d.ref));
-  await batch.commit();
-}
-
-async function purgeAllUserDataForEmail(email) {
-  const e = String(email || "").toLowerCase();
-  if (!e) return;
-  let foundUid = null;
-  try {
-    const wsnap = await getDocs(query(collection(db, "wallets"), where("email", "==", e)));
-    for (const d of wsnap.docs) {
-      if (!foundUid) foundUid = d.id;
-      await deleteDoc(d.ref);
-    }
-  } catch (err) { console.error("wallets:", err); }
-  const cols = ["orders", "walletHistory", "topups"];
-  for (const col of cols) {
-    const snap = await getDocs(query(collection(db, col), where("userEmail", "==", e)));
-    if (snap.empty) continue;
-    if (!foundUid) {
-      const withUid = snap.docs.find((d) => d.data().userId);
-      if (withUid) foundUid = withUid.data().userId;
-    }
-    let batch = writeBatch(db);
-    let n = 0;
-    for (const d of snap.docs) {
-      batch.delete(d.ref);
-      n++;
-      if (n >= 450) { await batch.commit(); batch = writeBatch(db); n = 0; }
-    }
-    if (n) await batch.commit();
-  }
-  const seen = new Set();
-  const deleteSnap = async (snap) => {
-    if (snap.empty) return;
-    let batch = writeBatch(db);
-    let n = 0;
-    for (const d of snap.docs) {
-      if (seen.has(d.id)) continue;
-      seen.add(d.id);
-      if (!foundUid && d.data().userId) foundUid = d.data().userId;
-      batch.delete(d.ref);
-      n++;
-      if (n >= 450) { await batch.commit(); batch = writeBatch(db); n = 0; }
-    }
-    if (n) await batch.commit();
-  };
-  await deleteSnap(await getDocs(query(collection(db, "notifications"), where("userEmail", "==", e))));
-  if (foundUid) {
-    await deleteSnap(await getDocs(query(collection(db, "notifications"), where("userId", "==", foundUid))));
-  }
-}
 
 async function handleAction(id, action, btn) {
   const card = btn.closest(".app-card");

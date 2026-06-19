@@ -15,5 +15,6 @@ build/
 *~
 .cache/
 .firebase/
+.claude/settings.local.json
 credentials.json
 service-account.json

@@ -105,12 +105,9 @@ service cloud.firestore {
     // ===== NOTIFICATIONS =====
     // SECURITY: Users and admins can create notifications
     match /notifications/{document=**} {
-      // Users can create notifications with audience="admin" (to alert admins)
-      // Admins can create any notification (to notify users or other admins)
-      allow create: if request.auth != null &&
-        (isAdmin(request.auth.token.email) ||
-         (request.resource.data.audience == "admin") ||
-         (request.resource.data.audience == "user" && request.resource.data.userId == request.auth.uid));
+      // Admins can create notifications; server-side API creates admin alerts
+      allow create: if request.auth != null && isAdmin(request.auth.token.email) ||
+        (request.resource.data.audience == "user" && request.auth != null && request.resource.data.userId == request.auth.uid);
 
       allow read: if request.auth != null &&
         ((isAdmin(request.auth.token.email) && resource.data.audience == "admin") ||

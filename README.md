@@ -2,7 +2,7 @@
 
 > A secure, modern meal ordering and wallet management platform with enterprise-grade security
 
-[![Vercel Deploy](https://img.shields.io/badge/Deployed%20on-Vercel-000?style=for-the-badge&logo=vercel)](https://igotdawat.vercel.app)
+[![Vercel Deploy](https://img.shields.io/badge/Deployed%20on-Vercel-000?style=for-the-badge&logo=vercel)](https://yourproject.vercel.app)
 [![Firebase](https://img.shields.io/badge/Backend-Firebase-FFA500?style=for-the-badge&logo=firebase)](https://firebase.google.com)
 [![Node.js](https://img.shields.io/badge/Runtime-Node.js-339933?style=for-the-badge&logo=node.js)](https://nodejs.org)
 [![Security](https://img.shields.io/badge/Security-Enterprise%20Grade-green?style=for-the-badge)](./config/firestore.rules)
@@ -224,8 +224,8 @@ dawat/
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/igotdawat/igotdawat.github.io.git
-cd igotdawat
+git clone https://github.com/yourusername/yourproject.git
+cd yourproject
 
 # 2. Install dependencies
 npm install
@@ -368,13 +368,15 @@ notifications: allow create: if isAdmin or audience=="admin"
 ## 🔐 Environment Variables
 
 ```env
-# Firebase
-GOOGLE_APPLICATION_CREDENTIALS=<service-account.json>
-FIREBASE_PROJECT_ID=igotdawat-v1
+# Firebase (keep these secret - never commit to repo)
+GOOGLE_APPLICATION_CREDENTIALS=<path-to-service-account.json>
+FIREBASE_PROJECT_ID=<your-firebase-project-id>
 
 # Optional
 DEBUG=false
 ```
+
+⚠️ **IMPORTANT**: Never commit `.env`, `.env.local`, or service account keys to version control. Use `.gitignore` and set environment variables via your hosting platform (Vercel, Firebase).
 
 ---
 
@@ -450,6 +452,6 @@ Proprietary - All rights reserved
 
 ### ⭐ Made with ❤️ using Firebase, Vercel & Node.js
 
-**[Live Demo](https://igotdawat.vercel.app)** • **[Report Issue](https://github.com/igotdawat/igotdawat.github.io/issues)** • **[Documentation](./README.md)**
+**[Deploy Guide](#setup)** • **[Report Issue](https://github.com/yourusername/yourproject/issues)** • **[Documentation](#-developer-guide)**
 
 </div>

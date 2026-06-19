@@ -46,7 +46,7 @@ service cloud.firestore {
     }
 
     // ===== WALLETS (keyed by userId) =====
-    // SECURITY CRITICAL: NO client-side writes allowed (only Vercel API via Admin SDK)
+    // SECURITY CRITICAL: Only users (orders) via Admin SDK, admins (topup confirm)
     // Users can READ their own wallet balance
     match /wallets/{userId} {
       // Users can only read their own wallet
@@ -55,12 +55,15 @@ service cloud.firestore {
       // Admins can read all wallets for monitoring
       allow read: if request.auth != null && isAdmin(request.auth.token.email);
 
-      // BLOCK ALL client-side writes (only Vercel API Admin SDK can update)
-      allow create, update, delete: if false;
+      // Admins can update wallets for topup confirmations
+      allow update: if request.auth != null && isAdmin(request.auth.token.email);
+
+      // Block creation/deletion
+      allow create, delete: if false;
     }
 
     // ===== WALLET HISTORY =====
-    // SECURITY CRITICAL: Only Vercel API can CREATE entries (via Admin SDK)
+    // SECURITY CRITICAL: Only Vercel API and admins can CREATE entries
     // Users can READ their own transaction history
     match /walletHistory/{document=**} {
       // Users can read their own transaction history
@@ -69,8 +72,11 @@ service cloud.firestore {
          request.auth.token.email == resource.data.userEmail ||
          isAdmin(request.auth.token.email));
 
-      // BLOCK ALL client-side writes (only Vercel API Admin SDK can create)
-      allow create, update, delete: if false;
+      // Admins can create history entries (for topup confirmations)
+      allow create: if request.auth != null && isAdmin(request.auth.token.email);
+
+      // Block updates and deletes
+      allow update, delete: if false;
     }
 
     // ===== TOP-UPS =====

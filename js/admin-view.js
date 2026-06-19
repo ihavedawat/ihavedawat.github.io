@@ -28,7 +28,7 @@ import { mountNotificationBell } from "./notifications.js";
 import { confirmDialog, typeToConfirmDialog, alertDialog, passwordConfirmDialog } from "./modal.js";
 import { show404, formatTk } from "./app-utils.js";
 import { getBalance, subscribeWallet } from "./wallet.js";
-import { escape, purgeOrdersForEmail, purgeAllUserDataForEmail } from "./admin-helpers.js";
+import { escape } from "./admin-helpers.js";
 
 // Verify the currently-signed-in admin's password. Used to gate the
 // most destructive actions (Wipe data, Clear all). Returns true on
@@ -734,7 +734,20 @@ async function handleAction(id, action, btn) {
     if (!ok) return;
     btn.disabled = true;
     try {
-      await purgeAllUserDataForEmail(email);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('Not authenticated');
+      const response = await fetch(window.location.origin + "/api/wipeUserData", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ email })
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to wipe data');
+      }
       await deleteDoc(doc(db, "applications", id));
       card.classList.add("is-leaving");
     } catch (err) {
@@ -763,7 +776,20 @@ async function handleAction(id, action, btn) {
     if (!ok) return;
     btn.disabled = true;
     try {
-      await purgeAllUserDataForEmail(email);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('Not authenticated');
+      const response = await fetch(window.location.origin + "/api/wipeUserData", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ email })
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to wipe data');
+      }
       btn.disabled = false;
       await alertDialog({
         title: "Wiped",

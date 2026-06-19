@@ -107,11 +107,10 @@ service cloud.firestore {
     match /notifications/{document=**} {
       // Users can create notifications with audience="admin" (to alert admins)
       // Admins can create any notification (to notify users or other admins)
-      // Unauthenticated users can alert admins (for new applications)
-      allow create: if request.resource.data.audience == "admin" ||
-        (request.auth != null &&
-         (isAdmin(request.auth.token.email) ||
-          (request.resource.data.audience == "user" && request.resource.data.userId == request.auth.uid)));
+      allow create: if request.auth != null &&
+        (isAdmin(request.auth.token.email) ||
+         (request.resource.data.audience == "admin") ||
+         (request.resource.data.audience == "user" && request.resource.data.userId == request.auth.uid));
 
       allow read: if request.auth != null &&
         ((isAdmin(request.auth.token.email) && resource.data.audience == "admin") ||

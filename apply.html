@@ -109,7 +109,6 @@
       import {
         onAuthStateChanged
       } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-      import { notifyAdmins } from "./js/notifications.js";
       import { ADMIN_EMAILS } from "./js/admin-config.js";
 
       // If someone is already signed in, they shouldn't see the apply page.
@@ -197,14 +196,12 @@
             status:    "pending",
             createdAt: serverTimestamp()
           });
-          notifyAdmins({
-            message:
-              "New application\n" +
-              "By: " + name + " (" + email + ")\n" +
-              "Mobile: " + mobile,
-            link: "applications#pending",
-            linkText: "Review",
-            type: "application-new"
+          fetch("/api/notifyNewApplication", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              message: "New application\nBy: " + name + " (" + email + ")\nMobile: " + mobile
+            })
           }).catch((e) => console.error("notify admin:", e));
           form.reset();
           status.textContent =

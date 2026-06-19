@@ -90,8 +90,9 @@ service cloud.firestore {
          isAdmin(request.auth.token.email));
       
       // Users can create NEW topup requests (pending status)
-      allow create: if request.auth != null && 
-        request.auth.uid == request.resource.data.userId &&
+      allow create: if request.auth != null &&
+        (request.auth.uid == request.resource.data.userId ||
+         request.auth.token.email == request.resource.data.userEmail) &&
         request.resource.data.status == "pending" &&
         request.resource.data.amount > 0;
       

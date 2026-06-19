@@ -23,12 +23,14 @@ export async function getBalance(userId) {
 
 // User submits topup request after sending money to bank
 export async function requestTopup({ userId, userEmail, amount, bankRef, note }) {
-  return addDoc(collection(db, "topups"), {
+  const payload = {
     userId, userEmail,
     amount: Math.round(Number(amount)),
     bankRef: String(bankRef || "").trim(),
     note: String(note || "").trim(),
     status: "pending",
     requestedAt: serverTimestamp()
-  });
+  };
+  console.log("Creating topup with payload:", payload);
+  return addDoc(collection(db, "topups"), payload);
 }

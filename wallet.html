@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Dawat · Wallet</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&display=swap" />
-    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="./css/style.css" />
     <meta name="view-transition" content="same-origin" />
   </head>
   <body class="admin-page">
@@ -32,10 +32,10 @@
       </div>
 
       <nav class="admin-nav">
-        <a href="menu">Menu</a>
-        <a href="orders">My Orders</a>
-        <a href="wallet" class="is-active">Wallet</a>
-        <a href="settings">Settings</a>
+        <a href="menu.html">Menu</a>
+        <a href="orders.html">My Orders</a>
+        <a href="wallet.html" class="is-active">Wallet</a>
+        <a href="settings.html">Settings</a>
       </nav>
 
       <p class="wallet-bar">
@@ -194,7 +194,7 @@
           }
           if (appData && appData.mustChangePassword) {
             sessionStorage.setItem('mustChangePassword', 'true');
-            window.location.replace("settings.html"); return;
+            window.location.replace("settings"); return;
           }
         } catch (err) {
           console.error("Could not load application doc:", err);

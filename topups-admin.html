@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dawat · Top-ups</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&display=swap" />
+    <link rel="stylesheet" href="./css/style.css" />
+    <meta name="view-transition" content="same-origin" />
+  </head>
+  <body class="admin-page">
+    <div class="lights">
+      <span class="bulb c1"></span><span class="bulb c2"></span><span class="bulb c3"></span><span class="bulb c4"></span><span class="bulb c5"></span>
+      <span class="bulb c1"></span><span class="bulb c2"></span><span class="bulb c3"></span><span class="bulb c4"></span><span class="bulb c5"></span>
+      <span class="bulb c1"></span><span class="bulb c2"></span><span class="bulb c3"></span><span class="bulb c4"></span><span class="bulb c5"></span>
+    </div>
+
+    <div class="top-fixed">
+      <div class="brand">DAWAT</div>
+      <div class="tagline">★ আপনার নিমন্ত্রণ ★</div>
+    </div>
+
+    <h1>Top-ups</h1>
+    <p id="topups-subtitle">Loading<span class="loading-dots"><span></span><span></span><span></span></span></p>
+
+    <div class="admin-view" id="topups-view" hidden>
+      <div class="admin-toolbar">
+        <div class="admin-who">Signed in as <span id="admin-who-email">—</span></div>
+        <div class="toolbar-actions">
+          <button type="button" id="signout-btn" class="ghost-btn">Sign out</button>
+        </div>
+      </div>
+
+      <nav class="admin-nav">
+        <a href="applications.html">Applications</a>
+        <a href="users.html">Users</a>
+        <a href="meals.html">Meals</a>
+        <a href="menu-admin.html">Menu</a>
+        <a href="orders-admin.html">Orders</a>
+        <a href="topups-admin.html" class="is-active">Top-ups</a>
+        <a href="settings-admin.html">Settings</a>
+      </nav>
+
+      <div class="filter-pills" role="tablist">
+        <button type="button" class="pill is-active" data-filter="pending"   role="tab" aria-selected="true">Pending</button>
+        <button type="button" class="pill"           data-filter="confirmed" role="tab" aria-selected="false">Confirmed</button>
+        <button type="button" class="pill"           data-filter="rejected"  role="tab" aria-selected="false">Declined</button>
+      </div>
+
+      <div id="topups-list" class="apps-list" aria-live="polite">
+        <p class="apps-empty">Loading<span class="loading-dots"><span></span><span></span><span></span></span></p>
+      </div>
+    </div>
+
+    <script type="module">
+      import { auth, db } from "./js/firebase.js";
+      import {
+        onAuthStateChanged, signOut
+      } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+      import {
+        collection, onSnapshot, query, orderBy, doc, updateDoc, serverTimestamp
+      } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+      import { confirmTopup, rejectTopup } from "./js/wallet.js";
+      import { formatTk } from "./js/app-utils.js";
+      import { notify, mountNotificationBell } from "./js/notifications.js";
+      import { confirmDialog, alertDialog } from "./js/modal.js";
+      import { show404 } from "./js/app-utils.js";
+      import { ADMIN_EMAILS } from "./js/admin-config.js";
+      import { escape } from "./js/admin-helpers.js";
+
+      const subtitle = document.getElementById("topups-subtitle");
+      const view     = document.getElementById("topups-view");
+      const whoEmail = document.getElementById("admin-who-email");
+      const signoutBtn = document.getElementById("signout-btn");
+      const listEl   = document.getElementById("topups-list");
+      const pills    = document.querySelectorAll(".filter-pills .pill");
+
+      let adminEmail = "";
+      let currentFilter = "pending";
+      let allRows = [];
+      const namesByEmail = {};
+      const TOPUPS_PER_PAGE = 10;
+      let topupsPage = 0;
+      const filterCounts = { pending: 0, confirmed: 0, rejected: 0 };
+      const FILTER_LABELS = {
+        pending: "Pending",
+        confirmed: "Confirmed",
+        rejected: "Declined"
+      };
+
+      function syncPills() {
+        pills.forEach((x) => {
+          const filter = x.dataset.filter;
+          const on = filter === currentFilter;
+          x.classList.toggle("is-active", on);
+          x.setAttribute("aria-selected", on ? "true" : "false");
+          x.textContent = FILTER_LABELS[filter] + " (" + (filterCounts[filter] || 0) + ")";
+        });
+      }
+
+      function setFilter(name) {
+        if (name !== "pending" && name !== "confirmed" && name !== "rejected") name = "pending";
+        currentFilter = name;
+        topupsPage = 0;
+        syncPills();
+        render();
+      }
+      function formatWhen(ts) {
+        if (!ts || !ts.toMillis) return "—";
+        const dt = new Date(ts.toMillis());
+        return dt.toLocaleDateString("en-GB", { day:"2-digit", month:"2-digit", year:"numeric" }) +
+          ", " + dt.toLocaleTimeString();
+      }
+
+      signoutBtn.addEventListener("click", async () => {
+        await signOut(auth);
+        window.location.href = "/";
+      });
+
+      pills.forEach((p) => {
+        p.addEventListener("click", () => {
+          history.replaceState(null, "", "#" + p.dataset.filter);
+          setFilter(p.dataset.filter);
+        });
+      });
+      window.addEventListener("hashchange", () => {
+        setFilter((location.hash || "#pending").slice(1));
+      });
+
+      function render() {
+        filterCounts.pending   = 0;
+        filterCounts.confirmed = 0;
+        filterCounts.rejected  = 0;
+        allRows.forEach((r) => {
+          const status = (r.status || "pending");
+          if (status === "pending" || status === "confirmed" || status === "rejected") {
+            filterCounts[status] += 1;
+          }
+        });
+        syncPills();
+
+        const rows = allRows.filter((r) => (r.status || "pending") === currentFilter);
+        if (!rows.length) {
+          const empty = currentFilter === "rejected" ? "declined" : currentFilter;
+          listEl.innerHTML = '<p class="apps-empty">No ' + empty + ' top-ups.</p>';
+          return;
+        }
+        const totalPages = Math.max(1, Math.ceil(rows.length / TOPUPS_PER_PAGE));
+        if (topupsPage >= totalPages) topupsPage = totalPages - 1;
+        if (topupsPage < 0) topupsPage = 0;
+        const start = topupsPage * TOPUPS_PER_PAGE;
+        const pageRows = rows.slice(start, start + TOPUPS_PER_PAGE);
+        const cardsHTML = pageRows.map((t) => {
+          const isPending = t.status === "pending" || !t.status;
+          const statusCls = t.status === "confirmed" ? "status-approved"
+                          : t.status === "rejected"  ? "status-rejected"
+                          : "status-pending";
+          const statusLabel = t.status === "confirmed" ? "confirmed"
+                            : t.status === "rejected"  ? "declined"
+                            : "pending";
+          const whenRow = isPending
+            ? '<dt>Requested</dt><dd>' + escape(formatWhen(t.requestedAt)) + '</dd>'
+            : '<dt>Requested</dt><dd>' + escape(formatWhen(t.requestedAt)) + '</dd>' +
+              '<dt>' + (t.status === "confirmed" ? "Confirmed" : "Declined") + '</dt>' +
+              '<dd>' + escape(formatWhen(t.confirmedAt)) +
+                (t.adminEmail ? ' <span class="muted">by ' + escape(t.adminEmail) + '</span>' : '') +
+              '</dd>';
+          const noteRow = t.note
+            ? '<dt>Note</dt><dd>' + escape(t.note) + '</dd>'
+            : '';
+          const actions = isPending
+            ? '<div class="card-actions">' +
+                '<button type="button" class="btn-approve" data-action="confirm" data-id="' + t.id + '">✓ Confirm</button>' +
+                '<button type="button" class="btn-reject"  data-action="reject"  data-id="' + t.id + '">✗ Decline</button>' +
+              '</div>'
+            : '';
+          return '<article class="app-card" data-id="' + t.id + '">' +
+            '<header class="card-head">' +
+              '<div>' +
+                '<span class="card-name">' + escape(namesByEmail[(t.userEmail || "").toLowerCase()] || t.userEmail || "—") + '</span>' +
+                (t.userEmail ? '<div class="muted" style="font-size:12px; margin-top:2px;">' + escape(t.userEmail) + '</div>' : '') +
+              '</div>' +
+              '<div class="card-head-right">' +
+                '<span class="card-status ' + statusCls + '">' + statusLabel + '</span>' +
+              '</div>' +
+            '</header>' +
+            '<dl class="card-fields">' +
+              '<dt>Amount</dt><dd><strong style="color: var(--gold);">' + formatTk(Number(t.amount || 0)) + '</strong></dd>' +
+              '<dt>Bank ref</dt><dd>' + escape(t.bankRef || "—") + '</dd>' +
+              noteRow +
+              whenRow +
+            '</dl>' +
+            actions +
+          '</article>';
+        }).join("");
+        const pager = rows.length > TOPUPS_PER_PAGE
+          ? `<div class="wallet-pager">
+              <button type="button" class="ghost-btn" data-pager="prev"${topupsPage === 0 ? " disabled" : ""}>◀ Prev</button>
+              <span>Page ${topupsPage + 1} / ${totalPages}</span>
+              <button type="button" class="ghost-btn" data-pager="next"${topupsPage >= totalPages - 1 ? " disabled" : ""}>Next ▶</button>
+            </div>`
+          : "";
+        listEl.innerHTML = cardsHTML + pager;
+      }
+
+      listEl.addEventListener("click", async (ev) => {
+        const pagerBtn = ev.target.closest("[data-pager]");
+        if (pagerBtn) {
+          if (pagerBtn.dataset.pager === "prev") topupsPage = Math.max(0, topupsPage - 1);
+          else topupsPage += 1;
+          render();
+          return;
+        }
+        const btn = ev.target.closest("button[data-action]");
+        if (!btn) return;
+        const id = btn.dataset.id;
+        const action = btn.dataset.action;
+        const t = allRows.find((r) => r.id === id);
+        if (!t) return;
+
+        const card = btn.closest(".app-card");
+        const buttons = card ? card.querySelectorAll("button") : [];
+        buttons.forEach((b) => (b.disabled = true));
+        try {
+          if (action === "confirm") {
+            const ok = await confirmDialog({
+              title: "Confirm top-up",
+              message: "Confirm top-up of " + formatTk(Number(t.amount || 0)) + " for " + (t.userEmail || "") + "?",
+              confirmLabel: "Confirm"
+            });
+            if (!ok) {
+              buttons.forEach((b) => (b.disabled = false));
+              return;
+            }
+            const res = await confirmTopup({ topupId: t.id, adminEmail });
+            if (res.alreadyHandled) {
+              await alertDialog({
+                title: "Already " + res.status,
+                message: "This top-up was already " + res.status + ". No change was made."
+              });
+              return;
+            }
+            await notify({
+              userId: t.userId,
+              userEmail: t.userEmail,
+              message:
+                "Top-up confirmed\n" +
+                "Amount: " + formatTk(Number(t.amount || 0)) + "\n" +
+                "Bank ref: " + (t.bankRef || "—"),
+              link: "wallet#history",
+              linkText: "View wallet",
+              type: "topup-confirmed"
+            });
+          } else if (action === "reject") {
+            const ok = await confirmDialog({
+              title: "Decline top-up",
+              message: "Decline this top-up request?",
+              confirmLabel: "Decline",
+              danger: true
+            });
+            if (!ok) {
+              buttons.forEach((b) => (b.disabled = false));
+              return;
+            }
+            const res = await rejectTopup({ topupId: t.id, adminEmail });
+            if (res.alreadyHandled) {
+              await alertDialog({
+                title: "Already " + res.status,
+                message: "This top-up was already " + res.status + ". No change was made."
+              });
+              return;
+            }
+            await notify({
+              userId: t.userId,
+              userEmail: t.userEmail,
+              message:
+                "Top-up declined\n" +
+                "Amount: " + formatTk(Number(t.amount || 0)) + "\n" +
+                "Bank ref: " + (t.bankRef || "—"),
+              link: "wallet#history",
+              linkText: "View wallet",
+              type: "topup-declined"
+            });
+          }
+        } catch (err) {
+          console.error(err);
+          alertDialog({ title: "Error", message: "Could not update. Try again." });
+          buttons.forEach((b) => (b.disabled = false));
+        }
+      });
+
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) { window.location.href = "/"; return; }
+        if (!ADMIN_EMAILS.includes((user.email || "").toLowerCase())) {
+          await show404(); return;
+        }
+        adminEmail = (user.email || "").toLowerCase();
+        whoEmail.textContent = user.email;
+        subtitle.textContent = "Review and confirm wallet top-up requests.";
+        view.hidden = false;
+        mountNotificationBell({ user });
+        setFilter((location.hash || "#pending").slice(1));
+
+        onSnapshot(
+          collection(db, "applications"),
+          (snap) => {
+            snap.docs.forEach((d) => {
+              const a = d.data();
+              const email = (a.email || "").toLowerCase();
+              if (email && a.name) namesByEmail[email] = a.name;
+            });
+            render();
+          },
+          (err) => console.error("applications subscription:", err)
+        );
+
+        onSnapshot(
+          query(collection(db, "topups"), orderBy("requestedAt", "desc")),
+          (snap) => {
+            allRows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+            render();
+          },
+          (err) => {
+            console.error(err);
+            listEl.innerHTML = '<p class="apps-empty">Failed to load top-ups.</p>';
+          }
+        );
+      });
+    </script>
+  </body>
+</html>

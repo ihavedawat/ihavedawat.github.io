@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dawat · Users</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&display=swap" />
+    <link rel="stylesheet" href="./css/style.css" />
+    <meta name="view-transition" content="same-origin" />
+  </head>
+  <body class="admin-page" data-group="users">
+    <div class="lights">
+      <span class="bulb c1"></span><span class="bulb c2"></span><span class="bulb c3"></span><span class="bulb c4"></span><span class="bulb c5"></span>
+      <span class="bulb c1"></span><span class="bulb c2"></span><span class="bulb c3"></span><span class="bulb c4"></span><span class="bulb c5"></span>
+      <span class="bulb c1"></span><span class="bulb c2"></span><span class="bulb c3"></span><span class="bulb c4"></span><span class="bulb c5"></span>
+    </div>
+
+    <div class="top-fixed">
+      <div class="brand">DAWAT</div>
+      <div class="tagline">★ আপনার নিমন্ত্রণ ★</div>
+    </div>
+
+    <h1>Users</h1>
+    <p id="admin-subtitle">Loading<span class="loading-dots"><span></span><span></span><span></span></span></p>
+
+    <div class="admin-view" id="apps-view" hidden>
+      <div class="admin-toolbar">
+        <div class="admin-who">Signed in as <span id="admin-who-email">—</span></div>
+        <div class="toolbar-actions">
+          <button type="button" id="signout-btn" class="ghost-btn">Sign out</button>
+        </div>
+      </div>
+
+      <nav class="admin-nav">
+        <a href="applications.html">Applications</a>
+        <a href="users.html" class="is-active">Users</a>
+        <a href="meals.html">Meals</a>
+        <a href="menu-admin.html">Menu</a>
+        <a href="orders-admin.html">Orders</a>
+        <a href="topups-admin.html">Top-ups</a>
+        <a href="settings-admin.html">Settings</a>
+      </nav>
+
+      <div class="filter-pills" role="tablist" aria-label="Filter users">
+        <button type="button" class="pill is-active" data-filter="customer" role="tab" aria-selected="true"></button>
+        <button type="button" class="pill"           data-filter="banned"   role="tab" aria-selected="false"></button>
+        <span class="pills-spacer"></span>
+        <button type="button" id="clear-all-btn" class="danger-btn" hidden>Clear all</button>
+      </div>
+
+      <div id="apps-list" class="apps-list" aria-live="polite">
+        <p class="apps-empty">Loading<span class="loading-dots"><span></span><span></span><span></span></span></p>
+      </div>
+    </div>
+
+    <script src="../js/stars.js"></script>
+    <script type="module" src="../js/admin-view.js"></script>
+  </body>
+</html>
+

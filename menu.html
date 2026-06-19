@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Dawat · Menu</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&display=swap" />
-    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="./css/style.css" />
     <meta name="view-transition" content="same-origin" />
   </head>
   <body class="admin-page">
@@ -34,10 +34,10 @@
       </div>
 
       <nav class="admin-nav">
-        <a href="menu" class="is-active">Menu</a>
-        <a href="orders">My Orders</a>
-        <a href="wallet">Wallet</a>
-        <a href="settings">Settings</a>
+        <a href="menu.html" class="is-active">Menu</a>
+        <a href="orders.html">My Orders</a>
+        <a href="wallet.html">Wallet</a>
+        <a href="settings.html">Settings</a>
       </nav>
 
       <p class="help-text" id="help-text">
@@ -46,7 +46,7 @@
 
       <p class="wallet-bar">
         Wallet balance: <strong id="wallet-balance">—</strong>
-        <a href="wallet" class="wallet-topup-link">+ Top-up</a>
+        <a href="wallet.html" class="wallet-topup-link">+ Top-up</a>
       </p>
 
       <div id="days" class="menu-days">
@@ -114,7 +114,7 @@
           }
           if (appData && appData.mustChangePassword) {
             sessionStorage.setItem('mustChangePassword', 'true');
-            window.location.replace("settings.html");
+            window.location.replace("settings");
             return;
           }
         } catch (err) {

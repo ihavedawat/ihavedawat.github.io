@@ -60,7 +60,6 @@
       import {
         collection, onSnapshot, query, orderBy, doc, updateDoc, serverTimestamp
       } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-      import { confirmTopup, rejectTopup } from "./js/wallet.js";
       import { formatTk } from "./js/app-utils.js";
       import { notify, mountNotificationBell } from "./js/notifications.js";
       import { confirmDialog, alertDialog } from "./js/modal.js";
@@ -232,7 +231,23 @@
               buttons.forEach((b) => (b.disabled = false));
               return;
             }
-            const res = await confirmTopup({ topupId: t.id, adminEmail });
+            const token = await auth.currentUser?.getIdToken();
+            if (!token) {
+              throw new Error('User not authenticated');
+            }
+            const response = await fetch(window.location.origin + "/api/confirmTopup", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+              },
+              body: JSON.stringify({ topupId: t.id })
+            });
+            if (!response.ok) {
+              const data = await response.json();
+              throw new Error(data.error || 'Failed to confirm topup');
+            }
+            const res = await response.json();
             if (res.alreadyHandled) {
               await alertDialog({
                 title: "Already " + res.status,
@@ -262,7 +277,23 @@
               buttons.forEach((b) => (b.disabled = false));
               return;
             }
-            const res = await rejectTopup({ topupId: t.id, adminEmail });
+            const token = await auth.currentUser?.getIdToken();
+            if (!token) {
+              throw new Error('User not authenticated');
+            }
+            const response = await fetch(window.location.origin + "/api/rejectTopup", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+              },
+              body: JSON.stringify({ topupId: t.id })
+            });
+            if (!response.ok) {
+              const data = await response.json();
+              throw new Error(data.error || 'Failed to reject topup');
+            }
+            const res = await response.json();
             if (res.alreadyHandled) {
               await alertDialog({
                 title: "Already " + res.status,

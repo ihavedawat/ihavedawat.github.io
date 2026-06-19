@@ -53,43 +53,48 @@ export default async function handler(req, res) {
 
     for (const item of items) {
       if (!item.mealId || !item.qty || item.qty <= 0) {
-        throw new Error('Invalid item: mealId and qty required');
+        return res.status(400).json({ error: 'Invalid item: mealId and qty required' });
       }
 
       const meal = mealsById[item.mealId];
       if (!meal) {
-        throw new Error(`Meal ${item.mealId} not found in menu`);
+        return res.status(400).json({ error: `Meal ${item.mealId} not found in menu` });
       }
 
       // Use server menu price, not client-provided price
       const serverPrice = Number(meal.price || 0);
-      if (serverPrice <= 0) {
-        throw new Error(`Meal ${item.mealId} has invalid price`);
+      if (serverPrice <= 0 || !Number.isFinite(serverPrice)) {
+        return res.status(400).json({ error: `Meal ${item.mealId} has invalid price` });
       }
 
-      const qty = Math.max(0, Math.min(item.qty, 100)); // Cap quantity at 100
-      if (qty > 0) {
-        validatedItems.push({
-          mealId: item.mealId,
-          name: meal.name || '',
-          price: serverPrice,
-          qty
-        });
-        serverTotal += serverPrice * qty;
+      // Validate quantity is a positive integer
+      const qty = Math.floor(Number(item.qty) || 0);
+      if (qty <= 0 || qty > 100) {
+        return res.status(400).json({ error: `Invalid quantity for meal ${item.mealId}: must be 1-100` });
       }
+
+      validatedItems.push({
+        mealId: item.mealId,
+        name: meal.name || '',
+        price: serverPrice,
+        qty
+      });
+      serverTotal += serverPrice * qty;
     }
 
     if (!validatedItems.length) {
-      throw new Error('No valid items in order');
+      return res.status(400).json({ error: 'No valid items in order' });
     }
 
-    // 3. Verify client calculation matches server calculation
-    // Allow small rounding differences (1 taka tolerance)
-    const diff = Math.abs(serverTotal - clientTotal);
-    if (diff > 1) {
+    if (serverTotal <= 0 || !Number.isFinite(serverTotal)) {
+      return res.status(400).json({ error: 'Invalid order total' });
+    }
+
+    // 3. Verify client calculation matches server calculation (STRICT - no tolerance for financial transactions)
+    if (serverTotal !== clientTotal) {
       return res.status(400).json({
         error: 'PRICE_MISMATCH',
-        message: `Order total mismatch: expected ${serverTotal}, got ${clientTotal}`
+        message: `Order total mismatch: server calculated ${serverTotal}৳, client sent ${clientTotal}৳`
       });
     }
 

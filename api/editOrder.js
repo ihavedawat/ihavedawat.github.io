@@ -100,7 +100,7 @@ export default async function handler(req, res) {
           transaction.update(histDocRef, {
             amount: newDebitAmount,
             balanceAfter: newBalance,
-            note: 'Order (edited)',
+            note: 'Order (edited) for ' + order.forDate,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
           });
         }

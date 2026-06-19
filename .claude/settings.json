@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(firebase deploy *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(grep -rn \"export\\\\|import\" e:/igotdawat/js --include=\"*.js\" ! -path \"*/node_modules/*\" ! -path \"*/.git/*\")",
+      "Bash(grep -r \"secureDebitForOrder\\\\|secureRefundForOrder\\\\|getBalance\\\\|subscribeWallet\\\\|requestTopup\\\\|confirmTopup\\\\|rejectTopup\" --include=\"*.js\" --include=\"*.html\" ! -path \"*/node_modules/*\" ! -path \"*/.git/*\")"
     ]
   }
 }

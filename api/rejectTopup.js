@@ -1,4 +1,5 @@
 import admin, { db } from './firebase-init.js';
+import { ADMIN_EMAILS } from '../js/admin-config.js';
 
 /**
  * Secure topup rejection
@@ -24,9 +25,7 @@ export default async function handler(req, res) {
   const adminEmail = decodedToken.email;
   const { topupId } = req.body;
 
-  // Check if user is admin
-  const adminEmails = ['ihavedawat@gmail.com', 'igotdawat@gmail.com'];
-  if (!adminEmails.includes((adminEmail || '').toLowerCase())) {
+  if (!ADMIN_EMAILS.map(e => e.toLowerCase()).includes((adminEmail || '').toLowerCase())) {
     return res.status(403).json({ error: 'Not authorized' });
   }
 

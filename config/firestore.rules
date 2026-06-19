@@ -113,7 +113,7 @@ service cloud.firestore {
          (request.resource.data.audience == "user" && request.resource.data.userId == request.auth.uid));
 
       allow read: if request.auth != null &&
-        (isAdmin(request.auth.token.email) && resource.data.audience == "admin" ||
+        ((isAdmin(request.auth.token.email) && resource.data.audience == "admin") ||
          request.auth.uid == resource.data.userId);
 
       // Users can only update their own notification's read status

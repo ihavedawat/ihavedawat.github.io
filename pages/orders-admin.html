@@ -58,6 +58,7 @@
       import { mountNotificationBell } from "./notifications.js";
       import { show404 } from "./app-utils.js";
       import { ADMIN_EMAILS } from "./admin-config.js";
+      import { escape } from "./admin-helpers.js";
 
       const subtitle = document.getElementById("orders-subtitle");
       const view     = document.getElementById("orders-view");
@@ -74,12 +75,6 @@
 
       function normalizeOfficeName(office) {
         return String(office || "").toLowerCase().replace(/\s+/g, "");
-      }
-
-      function escape(s) {
-        return String(s ?? "").replace(/[&<>"']/g, (c) => ({
-          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-        })[c]);
       }
       function dateFromKey(key) {
         const [y, m, d] = key.split("-").map(Number);

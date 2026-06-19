@@ -62,6 +62,7 @@
       import { confirmDialog, alertDialog } from "./js/modal.js";
       import { subscribeWallet, creditWallet, getBalance } from "./js/wallet.js";
       import { ADMIN_EMAILS } from "./js/admin-config.js";
+      import { escape } from "./js/admin-helpers.js";
 
       const subtitle = document.getElementById("orders-subtitle");
       const view     = document.getElementById("orders-view");
@@ -76,13 +77,9 @@
       let weekly      = {};
       let ordersPage  = 0;
       let visibleOrders = [];
+      let walletBalance = 0;
       const ORDERS_PER_PAGE = 10;
 
-      function escape(s) {
-        return String(s ?? "").replace(/[&<>"']/g, (c) => ({
-          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-        })[c]);
-      }
       function dateFromKey(key) {
         const [y, m, d] = key.split("-").map(Number);
         return new Date(y, m - 1, d);
@@ -255,9 +252,8 @@
           const prevTotal = Number(o.total || 0);
           const diff = total - prevTotal;
           if (diff > 0) {
-            const currentBalance = Number(walletBalanceEl.textContent.replace(/\D/g, "") || 0);
-            if (currentBalance < diff) {
-              msg.textContent = "Not enough balance. Top-up " + formatTk(diff - currentBalance) + " more.";
+            if (walletBalance < diff) {
+              msg.textContent = "Not enough balance. Top-up " + formatTk(diff - walletBalance) + " more.";
               msg.classList.add("is-err"); msg.hidden = false;
               return;
             }
@@ -283,12 +279,8 @@
             await updateDoc(doc(db, "orders", o.id), {
               items, total, updatedAt: serverTimestamp()
             });
-            const diff = total - prevTotal;
-            console.log("Order edit: prevTotal =", prevTotal, "total =", total, "diff =", diff);
-            
-            // If price changed, update wallet and history
+
             if (diff !== 0) {
-              console.log("Price changed by", diff, "- updating wallet");
               try {
                 // Find and update the existing walletHistory entry
                 const histSnap = await getDocs(
@@ -297,8 +289,7 @@
                     where("ref", "==", o.id))
                 );
                 if (histSnap.empty) {
-                  console.error("Could not find wallet history entry for order", o.id);
-                  return;
+                  throw new Error("Wallet history entry not found for order " + o.id);
                 }
                 const histDocId = histSnap.docs[0].id;
                 const histData = histSnap.docs[0].data();
@@ -310,10 +301,8 @@
                   const walletRef = doc(db, "wallets", auth.currentUser.uid);
                   const wSnap = await tx.get(walletRef);
                   const currentBalance = wSnap.exists() ? Number(wSnap.data().balance || 0) : 0;
-                  const newBalance = currentBalance - diff; // subtract diff (if diff is negative, balance increases; if positive, decreases)
-                  
-                  console.log("Transaction: current balance =", currentBalance, "diff =", diff, "new balance =", newBalance);
-                  
+                  const newBalance = currentBalance - diff;
+
                   // Update wallet
                   tx.update(walletRef, {
                     balance: newBalance,
@@ -328,13 +317,9 @@
                     updatedAt: serverTimestamp()
                   });
                 });
-                
-                console.log("Wallet and history updated successfully");
               } catch (walletErr) {
                 console.error("Wallet update failed:", walletErr);
               }
-            } else {
-              console.log("No price change");
             }
             const diffLabel = diff === 0
               ? "no price change"
@@ -419,7 +404,6 @@
             });
             // Refund the order total to wallet
             if (cancelledOrder && cancelledOrder.total) {
-              console.log("Cancelling order, refunding:", cancelledOrder.total);
               try {
                 // Create a NEW walletHistory entry for the cancellation refund
                 await runTransaction(db, async (tx) => {
@@ -427,9 +411,7 @@
                   const wSnap = await tx.get(walletRef);
                   const currentBalance = wSnap.exists() ? Number(wSnap.data().balance || 0) : 0;
                   const newBalance = currentBalance + Number(cancelledOrder.total);
-                  
-                  console.log("Cancel transaction: current balance =", currentBalance, "refund =", cancelledOrder.total, "new balance =", newBalance);
-                  
+
                   // Update wallet
                   tx.update(walletRef, {
                     balance: newBalance,
@@ -449,8 +431,6 @@
                     createdAt: serverTimestamp()
                   });
                 });
-                
-                console.log("Cancel refund completed successfully");
               } catch (walletErr) {
                 console.error("Wallet refund failed:", walletErr);
               }
@@ -511,9 +491,9 @@
         mountNotificationBell({ user });
 
         // Subscribe to wallet balance (non-blocking)
-        subscribeWallet(user.uid, (bal) => { 
-          console.log("Wallet balance updated to:", bal);
-          if (walletBalanceEl) walletBalanceEl.textContent = formatTk(bal); 
+        subscribeWallet(user.uid, (bal) => {
+          walletBalance = bal;
+          if (walletBalanceEl) walletBalanceEl.textContent = formatTk(bal);
         });
 
         // Preload meals + weekly menu so Edit can show full options.

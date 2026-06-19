@@ -1,6 +1,7 @@
 // Starfield: generates random stars, anchors cluster to form center, handles resize
 // Uses box-shadow technique for rendering, radial-gradient mask for fade effect
 (function () {
+  const RESIZE_DEBOUNCE_MS = 120;
   function makeStars(count, colors, spread, maxRadius) {
     var shadows = [];
     for (var i = 0; i < count; i++) {
@@ -61,7 +62,7 @@
   var resizeTimer = null;
   window.addEventListener("resize", function () {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(anchorToForm, 120);
+    resizeTimer = setTimeout(anchorToForm, RESIZE_DEBOUNCE_MS);
   });
 
   window.dawatReanchorStars = anchorToForm;

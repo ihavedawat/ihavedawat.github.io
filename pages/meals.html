@@ -77,6 +77,7 @@
       import { confirmDialog, alertDialog } from "./modal.js";
       import { show404 } from "./app-utils.js";
       import { ADMIN_EMAILS } from "./admin-config.js";
+      import { escape } from "./admin-helpers.js";
 
       const subtitle  = document.getElementById("meals-subtitle");
       const view      = document.getElementById("meals-view");
@@ -89,12 +90,6 @@
       let mealsPage = 0;
       let allMeals = [];
       const WEEKDAY_KEYS = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
-
-      function escape(s) {
-        return String(s ?? "").replace(/[&<>"']/g, (c) => ({
-          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-        })[c]);
-      }
 
       signoutBtn.addEventListener("click", async () => {
         await signOut(auth);

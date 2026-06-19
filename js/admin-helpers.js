@@ -11,6 +11,8 @@ import {
   writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+const FIRESTORE_BATCH_LIMIT = 450;
+
 export function escape(s) {
   return String(s ?? "")
     .replace(/&/g, "&amp;")
@@ -40,7 +42,9 @@ export async function purgeAllUserDataForEmail(email) {
       if (!foundUid) foundUid = d.id;
       await deleteDoc(d.ref);
     }
-  } catch (err) {}
+  } catch (err) {
+    console.error("Wallet purge failed for " + e, err);
+  }
   const cols = ["orders", "walletHistory", "topups"];
   for (const col of cols) {
     const snap = await getDocs(query(collection(db, col), where("userEmail", "==", e)));
@@ -54,7 +58,7 @@ export async function purgeAllUserDataForEmail(email) {
     for (const d of snap.docs) {
       batch.delete(d.ref);
       n++;
-      if (n >= 450) { await batch.commit(); batch = writeBatch(db); n = 0; }
+      if (n >= FIRESTORE_BATCH_LIMIT) { await batch.commit(); batch = writeBatch(db); n = 0; }
     }
     if (n) await batch.commit();
   }
@@ -69,7 +73,7 @@ export async function purgeAllUserDataForEmail(email) {
       if (!foundUid && d.data().userId) foundUid = d.data().userId;
       batch.delete(d.ref);
       n++;
-      if (n >= 450) { await batch.commit(); batch = writeBatch(db); n = 0; }
+      if (n >= FIRESTORE_BATCH_LIMIT) { await batch.commit(); batch = writeBatch(db); n = 0; }
     }
     if (n) await batch.commit();
   };
@@ -92,6 +96,7 @@ export async function purgeAllUsersData(excludeEmails = []) {
       }
     });
   } catch (err) {
+    console.error("Failed to fetch all applications for bulk purge:", err);
     throw err;
   }
 
@@ -101,7 +106,9 @@ export async function purgeAllUsersData(excludeEmails = []) {
     try {
       await purgeAllUserDataForEmail(email);
       count++;
-    } catch (err) {}
+    } catch (err) {
+      console.error("Error purging user " + email + ":", err);
+    }
   }
 
   return count;

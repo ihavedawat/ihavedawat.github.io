@@ -66,6 +66,7 @@
       import { confirmDialog, alertDialog } from "./modal.js";
       import { show404 } from "./app-utils.js";
       import { ADMIN_EMAILS } from "./admin-config.js";
+      import { escape } from "./admin-helpers.js";
 
       const subtitle = document.getElementById("topups-subtitle");
       const view     = document.getElementById("topups-view");
@@ -103,12 +104,6 @@
         topupsPage = 0;
         syncPills();
         render();
-      }
-
-      function escape(s) {
-        return String(s ?? "").replace(/[&<>"']/g, (c) => ({
-          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-        })[c]);
       }
       function formatWhen(ts) {
         if (!ts || !ts.toMillis) return "—";

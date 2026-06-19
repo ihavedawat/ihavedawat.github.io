@@ -65,6 +65,7 @@
       import { mountNotificationBell } from "./notifications.js";
       import { show404 } from "./app-utils.js";
       import { ADMIN_EMAILS } from "./admin-config.js";
+      import { escape } from "./admin-helpers.js";
 
       const subtitle = document.getElementById("menu-subtitle");
       const view     = document.getElementById("menu-view");
@@ -75,12 +76,6 @@
       const saveBtn  = document.getElementById("save-all");
       const msgEl    = document.getElementById("menu-msg");
       const helpText = document.querySelector('.help-text');
-
-      function escape(s) {
-        return String(s ?? "").replace(/[&<>"']/g, (c) => ({
-          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-        })[c]);
-      }
 
       signoutBtn.addEventListener("click", async () => {
         await signOut(auth);

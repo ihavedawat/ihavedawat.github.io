@@ -62,6 +62,8 @@ const GROUPS = {
   users:        ["customer", "banned"]
 };
 
+const COPY_FEEDBACK_TIMEOUT_MS = 1200;
+
 const group = document.body.dataset.group;
 if (!GROUPS[group]) {
   throw new Error('admin-view.js: missing/invalid <body data-group="…">');
@@ -181,6 +183,16 @@ FILTERS.forEach(f => {
 });
 syncPills();
 
+// Apply client-side filter transformations based on tab
+function applyClientFilter(items, filter) {
+  if (filter === "approved") {
+    return items.filter((a) => !a.credsIssued || a.mustChangePassword !== false);
+  } else if (filter === "customer") {
+    return items.filter((a) => !!a.credsIssued && a.mustChangePassword === false);
+  }
+  return items;
+}
+
 // ----- Sign out -----
 signoutBtn.addEventListener("click", async () => {
   await signOut(auth);
@@ -256,11 +268,7 @@ function subscribeToApplications(filter) {
       q,
       (snap) => {
         let items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        if (f === "approved") {
-          items = items.filter((a) => !a.credsIssued || a.mustChangePassword !== false);
-        } else if (f === "customer") {
-          items = items.filter((a) => !!a.credsIssued && a.mustChangePassword === false);
-        }
+        items = applyClientFilter(items, f);
         filterCounts[f] = items.length;
         syncPills();
       },
@@ -279,11 +287,7 @@ function subscribeToApplications(filter) {
     q,
     (snap) => {
       let items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      if (filter === "approved") {
-        items = items.filter((a) => !a.credsIssued || a.mustChangePassword !== false);
-      } else if (filter === "customer") {
-        items = items.filter((a) => !!a.credsIssued && a.mustChangePassword === false);
-      }
+      items = applyClientFilter(items, filter);
       items.sort((a, b) => {
         const ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
         const tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
@@ -830,7 +834,7 @@ listEl.addEventListener("click", async (e) => {
   setTimeout(() => {
     btn.innerHTML = ICON_COPY;
     btn.classList.remove("is-copied");
-  }, 1200);
+  }, COPY_FEEDBACK_TIMEOUT_MS);
 });
 
 // Clear-all: bulk-delete every doc currently shown on the active tab.

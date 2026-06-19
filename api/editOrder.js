@@ -42,6 +42,13 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Query for wallet history BEFORE transaction (reads must be outside)
+    const historySnap = await db.collection('walletHistory')
+      .where('userId', '==', userId)
+      .where('ref', '==', orderId)
+      .limit(1)
+      .get();
+
     const result = await db.runTransaction(async (transaction) => {
       // 1. Get the original order
       const orderRef = db.collection('orders').doc(orderId);
@@ -59,40 +66,33 @@ export default async function handler(req, res) {
       const prevTotal = Number(order.total || 0);
       const diff = total - prevTotal;
 
-      // 2. Update the order
+      // 2. Get wallet
+      const walletRef = db.collection('wallets').doc(userId);
+      const walletSnap = await transaction.get(walletRef);
+      const currentBalance = walletSnap.exists ? Number(walletSnap.data().balance || 0) : 0;
+
+      if (diff > 0 && currentBalance < diff) {
+        throw new Error('INSUFFICIENT_FUNDS');
+      }
+
+      const newBalance = currentBalance - diff;
+
+      // 3. NOW do all the writes
+      // Update order
       transaction.update(orderRef, {
         items,
         total,
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
-      // 3. If price changed, adjust wallet and history
+      // Update wallet if price changed
       if (diff !== 0) {
-        // Get wallet
-        const walletRef = db.collection('wallets').doc(userId);
-        const walletSnap = await transaction.get(walletRef);
-        const currentBalance = walletSnap.exists ? Number(walletSnap.data().balance || 0) : 0;
-
-        if (diff > 0 && currentBalance < diff) {
-          throw new Error('INSUFFICIENT_FUNDS');
-        }
-
-        const newBalance = currentBalance - diff;
-
-        // Update wallet
         transaction.update(walletRef, {
           balance: newBalance,
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
-        // Find and update the existing wallet history entry for this order
-        // Note: Can't use transaction.get() on queries, must fetch outside transaction
-        const historySnap = await db.collection('walletHistory')
-          .where('userId', '==', userId)
-          .where('ref', '==', orderId)
-          .limit(1)
-          .get();
-
+        // Update history if it exists
         if (!historySnap.empty) {
           const histDocRef = historySnap.docs[0].ref;
           const newDebitAmount = -total;

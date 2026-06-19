@@ -267,9 +267,11 @@
           const btn = topupForm.querySelector("button[type=submit]");
           btn.disabled = true;
           try {
+            const userEmail = (user.email || "").toLowerCase();
+            console.log("Auth user:", { uid: user.uid, email: user.email, emailLower: userEmail });
             await requestTopup({
               userId: user.uid,
-              userEmail: (user.email || "").toLowerCase(),
+              userEmail: userEmail,
               amount, bankRef,
               note: String(fd.get("note") || "").trim()
             });

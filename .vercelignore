@@ -1,6 +1,6 @@
 .git
 .gitignore
 node_modules
-.claude
+.claude/
 .env.local
 *.md

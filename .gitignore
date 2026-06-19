@@ -3,6 +3,7 @@ node_modules/
 .env.local
 .env.*.local
 .vercel/
+.claude/
 .DS_Store
 *.log
 *.md
@@ -16,6 +17,5 @@ build/
 *~
 .cache/
 .firebase/
-.claude/settings.local.json
 credentials.json
 service-account.json

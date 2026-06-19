@@ -62,11 +62,10 @@
       } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
       import {
         collection, query, where, getDocs, getDoc, doc,
-        addDoc, updateDoc, onSnapshot, serverTimestamp
+        onSnapshot
       } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
       import { nextNDates, toDateKey, formatDateLabel, formatTk, orderingClosed, pastCutoff, weekdayKey, nextOrderingOpen, formatNextOpenLabel, formatTodaysCloseTime, show404 } from "./js/app-utils.js";
       import { subscribeWallet } from "./js/wallet.js";
-      import { secureDebitForOrder } from "./js/wallet-secure.js";
       import { mountNotificationBell, notifyAdmins } from "./js/notifications.js";
       import { confirmDialog, alertDialog } from "./js/modal.js";
       import { ADMIN_EMAILS } from "./js/admin-config.js";
@@ -312,30 +311,35 @@
           }
           placeBtn.disabled = true;
           try {
-            // Create the order first so we have an id for the wallet txn,
-            // then debit. If the debit fails (race / insufficient funds),
-            // cancel the order to keep things consistent.
-            const orderRef = await addDoc(collection(db, "orders"), {
-              userEmail:  currentUser.email.toLowerCase(),
-              userId:     currentUser.uid,
-              forDate:    key,
-              items, total,
-              status:     "placed",
-              paid:       true,
-              createdAt:  serverTimestamp()
+            // Call secure server-side order placement
+            // Server validates menu items, calculates total, debits wallet in transaction
+            const token = await currentUser.getIdToken();
+            const response = await fetch('/api/placeOrder', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                items: items.map(it => ({ mealId: it.mealId, qty: it.qty })),
+                forDate: key,
+                clientTotal: total
+              })
             });
-            try {
-              await secureDebitForOrder({
-                userId: currentUser.uid,
-                userEmail: currentUser.email.toLowerCase(),
-                amount: total,
-                orderId: orderRef.id,
-                note: "Order for " + key
-              });
-            } catch (debitErr) {
-              await updateDoc(orderRef, { status: "cancelled", cancelledAt: serverTimestamp(), cancelReason: "debit_failed" });
-              throw debitErr;
+
+            if (!response.ok) {
+              const data = await response.json();
+              if (data.error === 'PRICE_MISMATCH') {
+                throw new Error('Price verification failed: ' + data.message);
+              }
+              if (data.error === 'INSUFFICIENT_FUNDS') {
+                throw new Error('INSUFFICIENT_FUNDS');
+              }
+              throw new Error(data.error || 'Failed to place order');
             }
+
+            const orderResult = await response.json();
+            const orderRef = { id: orderResult.orderId };
             const [_dy, _dm, _dd] = key.split("-").map(Number);
             const dateLabel = formatDateLabel(new Date(_dy, _dm - 1, _dd));
             const itemList = items.map((it) => "  • " + it.name + " ×" + it.qty + " — " + formatTk(it.price * it.qty)).join("\n");

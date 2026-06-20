@@ -99,21 +99,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json(result);
   } catch (error) {
-    console.error('Cancel order error:', error);
-
-    if (error.message === 'Order not found') {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-    if (error.message === 'Order does not belong to this user') {
-      return res.status(403).json({ error: 'Order does not belong to this user' });
-    }
-    if (error.message === 'Order already cancelled') {
-      return res.status(400).json({ error: 'Order already cancelled' });
-    }
-    if (error.message?.includes('cannot be cancelled')) {
-      return res.status(400).json({ error: error.message });
-    }
-
-    return res.status(500).json({ error: error.message || 'Failed to cancel order' });
+    const { sendErrorResponse } = await import('./error-handler.js');
+    return sendErrorResponse(res, error, 'Failed to cancel order');
   }
 }

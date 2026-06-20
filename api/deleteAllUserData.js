@@ -128,7 +128,7 @@ export default async function handler(req, res) {
       totalDeleted
     });
   } catch (error) {
-    console.error('Delete all user data error:', error);
-    return res.status(500).json({ error: error.message || 'Failed to delete data' });
+    const { sendErrorResponse } = await import('./error-handler.js');
+    return sendErrorResponse(res, error, 'Failed to delete data');
   }
 }

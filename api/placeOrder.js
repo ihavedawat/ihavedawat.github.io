@@ -160,18 +160,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json(result);
   } catch (error) {
-    console.error('Place order error:', error);
-
-    if (error.message === 'INSUFFICIENT_FUNDS') {
-      return res.status(402).json({ error: 'INSUFFICIENT_FUNDS' });
-    }
-    if (error.message?.includes('not found in menu')) {
-      return res.status(400).json({ error: error.message });
-    }
-    if (error.message?.includes('Invalid')) {
-      return res.status(400).json({ error: error.message });
-    }
-
-    return res.status(500).json({ error: error.message || 'Failed to place order' });
+    const { sendErrorResponse } = await import('./error-handler.js');
+    return sendErrorResponse(res, error, 'Failed to place order');
   }
 }

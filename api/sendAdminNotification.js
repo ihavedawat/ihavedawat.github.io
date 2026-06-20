@@ -39,7 +39,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ success: true });
   } catch (error) {
-    console.error('Send admin notification error:', error);
-    return res.status(500).json({ error: error.message || 'Failed to send notification' });
+    const { sendErrorResponse } = await import('./error-handler.js');
+    return sendErrorResponse(res, error, 'Failed to send notification');
   }
 }

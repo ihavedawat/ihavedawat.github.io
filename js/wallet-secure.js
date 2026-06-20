@@ -21,14 +21,13 @@ export async function secureDebitForOrder({ userId, userEmail, amount, orderId, 
       throw new Error('User not authenticated');
     }
 
-    const response = await fetch(`${API_BASE}/api/wallet`, {
+    const response = await fetch(`${API_BASE}/api/debitWallet`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
-        action: 'debit',
         amount,
         orderId,
         note
@@ -64,14 +63,13 @@ export async function secureRefundForOrder({ userId, userEmail, amount, orderId,
       throw new Error('User not authenticated');
     }
 
-    const response = await fetch(`${API_BASE}/api/wallet`, {
+    const response = await fetch(`${API_BASE}/api/refundWallet`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
-        action: 'refund',
         amount,
         orderId,
         note

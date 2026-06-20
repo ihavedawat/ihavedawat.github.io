@@ -14,14 +14,14 @@ export default async function handler(req, res) {
 
   const token = req.headers.authorization?.split('Bearer ')[1];
   if (!token) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ error: 'Missing authorization token' });
   }
 
   let decodedToken;
   try {
     decodedToken = await admin.auth().verifyIdToken(token);
   } catch (err) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ error: 'Invalid token' });
   }
 
   const userId = decodedToken.uid;

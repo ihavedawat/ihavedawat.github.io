@@ -15,14 +15,14 @@ export default async function handler(req, res) {
 
   const token = req.headers.authorization?.split('Bearer ')[1];
   if (!token) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ error: 'Missing authorization token' });
   }
 
   let decodedToken;
   try {
     decodedToken = await admin.auth().verifyIdToken(token);
   } catch (err) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ error: 'Invalid token' });
   }
 
   const userId = decodedToken.uid;
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
   if (!forDate || typeof forDate !== 'string') {
     return res.status(400).json({ error: 'Invalid forDate' });
   }
-  if (typeof clientTotal !== 'number' || clientTotal <= 0 || !Number.isFinite(clientTotal)) {
+  if (typeof clientTotal !== 'number' || clientTotal <= 0) {
     return res.status(400).json({ error: 'Invalid total' });
   }
 

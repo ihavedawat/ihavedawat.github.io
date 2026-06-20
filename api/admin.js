@@ -134,6 +134,23 @@ async function notifyNewApplication(req, res, decodedToken) {
   }
 
   try {
+    // Verify that an application with this email actually exists in Firestore
+    const appSnap = await db.collection('applications')
+      .where('email', '==', email.toLowerCase())
+      .limit(1)
+      .get();
+
+    if (appSnap.empty) {
+      return res.status(400).json({ error: 'Application not found' });
+    }
+
+    const appData = appSnap.docs[0].data();
+
+    // Only notify if the application is actually pending (just created)
+    if (appData.status !== 'pending') {
+      return res.status(400).json({ error: 'Application already processed' });
+    }
+
     await notifyAdminsInternal({
       message: `New application\nBy: ${name} (${email})\nMobile: ${mobile}`,
       link: 'applications#pending',

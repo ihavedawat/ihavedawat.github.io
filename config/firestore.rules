@@ -26,10 +26,12 @@ service cloud.firestore {
     }
 
     match /applications/{appId} {
-      // SECURITY: Users can only create applications for their own email, with pending status
-      allow create: if request.auth != null &&
-        request.resource.data.email == request.auth.token.email &&
-        request.resource.data.status == "pending";
+      // SECURITY: Unauthenticated users can create applications with only safe fields (name, mobile, email, office, address)
+      // Must have status="pending" and non-empty email to prevent spam/abuse
+      allow create: if request.resource.data.status == "pending" &&
+        request.resource.data.email != null &&
+        request.resource.data.email != "" &&
+        request.resource.data.diff({}).affectedKeys().hasOnly(['name', 'mobile', 'email', 'office', 'address', 'status', 'createdAt']);
       allow read: if true;
       allow update: if request.auth != null && isAdmin(request.auth.token.email);
       allow delete: if request.auth != null && isAdmin(request.auth.token.email);

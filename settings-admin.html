@@ -220,8 +220,10 @@
         wipeMsg.classList.remove("is-ok", "is-err");
 
         try {
-          // Purge all user data (excluding admins)
-          const count = await purgeAllUsersData(ADMIN_EMAILS, () => auth.currentUser?.getIdToken());
+          // Purge all user data via backend API
+          const token = await auth.currentUser?.getIdToken();
+          if (!token) throw new Error('Not authenticated');
+          const count = await purgeAllUsersData(token);
           wipeAllBtn.disabled = false;
           await alertDialog({
             title: "Wiped",

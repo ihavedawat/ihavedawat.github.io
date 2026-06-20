@@ -97,58 +97,23 @@ export async function purgeAllUserDataForEmail(email) {
   }
 }
 
-export async function purgeAllUsersData(excludeEmails = [], getAuthToken = null) {
-  // If getAuthToken is provided, use backend API for bulk purge
-  if (getAuthToken) {
-    try {
-      const token = await getAuthToken();
-      if (!token) throw new Error('Not authenticated');
-      const response = await fetch(window.location.origin + "/api/purgeAllUserData", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ purgeAll: true })
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to purge data');
-      }
-      return (await response.json()).totalPurged;
-    } catch (err) {
-      console.error("Bulk purge via API failed:", err);
-      throw err;
-    }
+export async function purgeAllUsersData(token) {
+  // Use backend API for bulk purge (client-side purge violates Firestore rules)
+  if (!token) throw new Error('Token required for bulk purge');
+
+  const response = await fetch(window.location.origin + "/api/purgeAllUserData", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify({ purgeAll: true })
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || 'Failed to purge data');
   }
 
-  // Fallback to client-side purge (for backward compatibility)
-  const excluded = new Set((excludeEmails || []).map((e) => String(e || "").toLowerCase()));
-  const allEmails = new Set();
-
-  try {
-    const snap = await getDocs(collection(db, "applications"));
-    snap.docs.forEach((d) => {
-      const email = String(d.data().email || "").toLowerCase();
-      if (email && !excluded.has(email)) {
-        allEmails.add(email);
-      }
-    });
-  } catch (err) {
-    console.error("Failed to fetch all applications for bulk purge:", err);
-    throw err;
-  }
-
-  // Purge each user's data
-  let count = 0;
-  for (const email of allEmails) {
-    try {
-      await purgeAllUserDataForEmail(email);
-      count++;
-    } catch (err) {
-      console.error("Error purging user " + email + ":", err);
-    }
-  }
-
-  return count;
+  return (await response.json()).totalPurged;
 }

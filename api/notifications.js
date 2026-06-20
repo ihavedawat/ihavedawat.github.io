@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     if (action === 'send-admin') {
       const adminEmails = ['ihavedawat@gmail.com', 'igotdawat@gmail.com'];
       if (!adminEmails.includes(decodedToken.email)) {
-        return res.status(403).json({ error: 'Only admins can send notifications' });
+        return res.status(403).json({ error: 'Unauthorized' });
       }
 
       const { message, link = "", linkText = "", type = "info" } = req.body;

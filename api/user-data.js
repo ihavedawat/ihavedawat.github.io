@@ -21,7 +21,7 @@ export default async function handler(req, res) {
 
   const adminEmail = decodedToken.email;
   if (!ADMIN_EMAILS.map(e => e.toLowerCase()).includes((adminEmail || '').toLowerCase())) {
-    return res.status(403).json({ error: 'Not authorized' });
+    return res.status(403).json({ error: 'Unauthorized' });
   }
 
   const { action, email, userId, appId } = req.body;

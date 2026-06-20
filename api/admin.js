@@ -93,6 +93,11 @@ async function wipeUserData(req, res, decodedToken) {
 }
 
 async function sendNotification(req, res, decodedToken) {
+  const adminEmail = decodedToken.email;
+  if (!ADMIN_EMAILS.map(e => e.toLowerCase()).includes((adminEmail || '').toLowerCase())) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
   const { message, link = "", linkText = "", type = "info", action } = req.body;
 
   if (!message) {

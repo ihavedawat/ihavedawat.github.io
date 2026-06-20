@@ -151,12 +151,12 @@ async function notifyNewApplication(req, res, decodedToken) {
       return res.status(400).json({ error: 'Application already processed' });
     }
 
-    await notifyAdminsInternal({
+    notifyAdminsInternal({
       message: `New application\nBy: ${name} (${email})\nMobile: ${mobile}`,
       link: 'applications#pending',
       linkText: 'Review',
       type: 'application-new'
-    });
+    }).catch(() => {});
 
     return res.status(200).json({ success: true });
   } catch (error) {

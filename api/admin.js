@@ -167,6 +167,7 @@ export default async function handler(req, res) {
     case 'notify':
       return sendNotification(req, res, decodedToken, true);
     case 'admin-new-app':
+    case 'notify-system':
       return sendNotification(req, res, decodedToken, false);
     default:
       return res.status(400).json({ error: 'Invalid action' });

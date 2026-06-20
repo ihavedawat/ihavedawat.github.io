@@ -14,7 +14,7 @@ export async function notifyAdminsViaAPI({ message, link = "", linkText = "", ty
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`
       },
-      body: JSON.stringify({ action: 'admin-new-app', message, link, linkText, type })
+      body: JSON.stringify({ action: 'notify-system', message, link, linkText, type })
     });
 
     if (!response.ok) {

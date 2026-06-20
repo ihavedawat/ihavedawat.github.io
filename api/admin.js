@@ -92,10 +92,12 @@ async function wipeUserData(req, res, decodedToken) {
   }
 }
 
-async function sendNotification(req, res, decodedToken) {
-  const adminEmail = decodedToken.email;
-  if (!ADMIN_EMAILS.map(e => e.toLowerCase()).includes((adminEmail || '').toLowerCase())) {
-    return res.status(403).json({ error: 'Unauthorized' });
+async function sendNotification(req, res, decodedToken, requireAdmin = false) {
+  if (requireAdmin) {
+    const adminEmail = decodedToken.email;
+    if (!ADMIN_EMAILS.map(e => e.toLowerCase()).includes((adminEmail || '').toLowerCase())) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
   }
 
   const { message, link = "", linkText = "", type = "info", action } = req.body;
@@ -163,8 +165,9 @@ export default async function handler(req, res) {
     case 'wipe':
       return wipeUserData(req, res, decodedToken);
     case 'notify':
+      return sendNotification(req, res, decodedToken, true);
     case 'admin-new-app':
-      return sendNotification(req, res, decodedToken);
+      return sendNotification(req, res, decodedToken, false);
     default:
       return res.status(400).json({ error: 'Invalid action' });
   }

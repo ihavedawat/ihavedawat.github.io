@@ -24,7 +24,20 @@ async function createTopupRequest(req, res, decodedToken) {
       requestedAt: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    const userName = decodedToken.name || '';
+    // Get user's name from application record
+    let userName = '';
+    try {
+      const appSnap = await db.collection('applications')
+        .where('email', '==', userEmail.toLowerCase())
+        .limit(1)
+        .get();
+      if (!appSnap.empty) {
+        userName = appSnap.docs[0].data().name || '';
+      }
+    } catch (e) {
+      // If lookup fails, continue without name
+    }
+
     const byLabel = userName ? `${userName} (${userEmail})` : userEmail;
 
     notifyAdminsInternal({

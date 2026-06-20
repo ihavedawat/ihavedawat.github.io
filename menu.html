@@ -66,7 +66,8 @@
       } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
       import { nextNDates, toDateKey, formatDateLabel, formatTk, orderingClosed, pastCutoff, weekdayKey, nextOrderingOpen, formatNextOpenLabel, formatTodaysCloseTime, show404 } from "./js/app-utils.js";
       import { subscribeWallet } from "./js/wallet.js";
-      import { mountNotificationBell, notifyAdmins } from "./js/notifications.js";
+      import { mountNotificationBell } from "./js/notifications.js";
+      import { notifyAdminsViaAPI } from "./js/notify-admins-api.js";
       import { confirmDialog, alertDialog } from "./js/modal.js";
       import { ADMIN_EMAILS } from "./js/admin-config.js";
       import { escape } from "./js/admin-helpers.js";
@@ -346,7 +347,7 @@
             const byLabel = currentName
               ? currentName + " (" + currentUser.email.toLowerCase() + ")"
               : currentUser.email.toLowerCase();
-            notifyAdmins({
+            notifyAdminsViaAPI({
               message:
                 "New order — " + dateLabel + "\n" +
                 "By: " + byLabel + "\n" +
@@ -394,7 +395,7 @@
               const byLabel = currentName
                 ? currentName + " (" + currentUser.email.toLowerCase() + ")"
                 : currentUser.email.toLowerCase();
-              notifyAdmins({
+              notifyAdminsViaAPI({
                 message:
                   "Order cancelled — " + dateLabel + "\n" +
                   "By: " + byLabel + "\n" +

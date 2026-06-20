@@ -58,7 +58,8 @@
         doc, getDocs, getDoc, runTransaction
       } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
       import { formatDateLabel, formatTk, pastCutoff, weekdayKey, show404 } from "./js/app-utils.js";
-      import { mountNotificationBell, notifyAdmins } from "./js/notifications.js";
+      import { mountNotificationBell } from "./js/notifications.js";
+      import { notifyAdminsViaAPI } from "./js/notify-admins-api.js";
       import { confirmDialog, alertDialog } from "./js/modal.js";
       import { subscribeWallet, getBalance } from "./js/wallet.js";
       import { secureDebitForOrder } from "./js/wallet-secure.js";
@@ -351,7 +352,7 @@
             const itemList = lines.join("\n");
             const dateLabel = formatDateLabel(dateFromKey(o.forDate));
             const byLabel = currentName ? currentName + " (" + email + ")" : email;
-            notifyAdmins({
+            notifyAdminsViaAPI({
               message:
                 "Order edited — " + dateLabel + "\n" +
                 "By: " + byLabel + "\n" +
@@ -407,7 +408,7 @@
               const itemList = (cancelledOrder.items || []).map((it) => "  • " + it.name + " ×" + it.qty + " — " + formatTk(it.price * it.qty)).join("\n");
               const dateLabel = formatDateLabel(dateFromKey(cancelledOrder.forDate));
               const byLabel = currentName ? currentName + " (" + email + ")" : email;
-              notifyAdmins({
+              notifyAdminsViaAPI({
                 message:
                   "Order cancelled — " + dateLabel + "\n" +
                   "By: " + byLabel + "\n" +

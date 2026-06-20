@@ -99,7 +99,8 @@
       import {
         onAuthStateChanged, signOut
       } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-      import { mountNotificationBell, notifyAdmins } from "./js/notifications.js";
+      import { mountNotificationBell } from "./js/notifications.js";
+      import { notifyAdminsViaAPI } from "./js/notify-admins-api.js";
       import {
         collection, query, where, onSnapshot, getDocs
       } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
@@ -285,23 +286,16 @@
             const email = (user.email || "").toLowerCase();
             const byLabel = currentName ? currentName + " (" + email + ")" : email;
             // Notify admins via backend API
-            try {
-              const token = await user.getIdToken();
-              await fetch(window.location.origin + "/api/notifyTopupRequest", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                  userName: byLabel,
-                  amount,
-                  bankRef
-                })
-              });
-            } catch (err) {
-              console.warn("Could not notify admins:", err);
-            }
+            await notifyAdminsViaAPI({
+              message:
+                "Top-up requested\n" +
+                "From: " + byLabel + "\n" +
+                "Amount: " + formatTk(amount) + "\n" +
+                "Bank ref: " + bankRef,
+              link: "topups-admin#pending",
+              linkText: "Review",
+              type: "topup-requested"
+            });
             topupForm.reset();
             refreshRef();
             topupMsg.textContent = "✓ Request submitted. You'll see it credited once confirmed.";

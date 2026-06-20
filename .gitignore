@@ -18,3 +18,5 @@ build/
 .firebase/
 credentials.json
 service-account.json
+
+.vercel

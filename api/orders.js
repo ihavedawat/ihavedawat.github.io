@@ -9,8 +9,8 @@ async function placeOrder(req, res, userId, userEmail, decodedToken) {
   if (!forDate || typeof forDate !== 'string') {
     return res.status(400).json({ error: 'Invalid forDate' });
   }
-  if (typeof clientTotal !== 'number' || clientTotal <= 0) {
-    return res.status(400).json({ error: 'Invalid total' });
+  if (typeof clientTotal !== 'number' || clientTotal <= 0 || !Number.isInteger(clientTotal)) {
+    return res.status(400).json({ error: 'Invalid total: must be positive integer' });
   }
 
   try {
@@ -209,8 +209,8 @@ async function editOrder(req, res, userId, userEmail, decodedToken) {
     return res.status(400).json({ error: 'Missing orderId, items, or total' });
   }
 
-  if (typeof total !== 'number' || !Number.isFinite(total) || total <= 0) {
-    return res.status(400).json({ error: 'Invalid total: must be a positive number' });
+  if (typeof total !== 'number' || !Number.isFinite(total) || total <= 0 || !Number.isInteger(total)) {
+    return res.status(400).json({ error: 'Invalid total: must be a positive integer' });
   }
 
   try {

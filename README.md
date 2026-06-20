@@ -289,9 +289,15 @@ POST /api/rejectTopup
 #### Admin Operations
 ```
 POST /api/wipeUserData
-  - Admin: Delete all user data (not user account)
+  - Admin: Delete all user data for specific email
   - Input: { email }
   - Deletes: orders, wallet, topups, history, notifications
+  - Returns: { success, message, totalDeleted }
+
+POST /api/deleteAllUserData
+  - Admin: Bulk delete all users or specific users
+  - Input: { deleteAll: boolean }
+  - Deletes: all user data across all collections
   - Returns: { success, message, totalDeleted }
 ```
 

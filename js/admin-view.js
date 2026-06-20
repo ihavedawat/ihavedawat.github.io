@@ -28,6 +28,7 @@ import { mountNotificationBell } from "./notifications.js";
 import { confirmDialog, typeToConfirmDialog, alertDialog, passwordConfirmDialog } from "./modal.js";
 import { show404, formatTk } from "./app-utils.js";
 import { getBalance, subscribeWallet } from "./wallet.js";
+import { logError } from "./logger.js";
 
 // Verify the currently-signed-in admin's password. Used to gate the
 // most destructive actions (Wipe data, Clear all). Returns true on
@@ -263,7 +264,7 @@ function subscribeToApplications(filter) {
         filterCounts[f] = items.length;
         syncPills();
       },
-      (err) => console.error("Error counting " + f + ":", err)
+      (err) => logError(`count:${f}`, err)
     );
     unsubscribers.push(unsub);
   });
@@ -300,7 +301,7 @@ function subscribeToApplications(filter) {
       renderList(items);
     },
     (err) => {
-      console.error(err);
+      logError('items:subscribe', err);
       listEl.innerHTML =
         '<p class="apps-empty is-error">⚠ Could not load applications. ' +
         'You may not have permission, or the server is unreachable.</p>';
@@ -323,7 +324,7 @@ async function renderList(items) {
     try {
       await loadWalletBalancesForPage(pageItems);
     } catch (err) {
-      console.error("Failed to load wallet balances:", err);
+      logError('wallet:load', err);
     }
   }
   const cardsHTML = pageItems.map(cardHTML).join("");
@@ -588,7 +589,7 @@ async function handleAction(id, action, btn) {
         credsIssuedAt: serverTimestamp()
       });
     } catch (err) {
-      console.error(err);
+      logError('action', err);
       btn.disabled = false;
       alertDialog({ title: "Error", message: "Could not update." });
     }
@@ -608,7 +609,7 @@ async function handleAction(id, action, btn) {
         credsIssuedAt: null
       });
     } catch (err) {
-      console.error(err);
+      logError('action', err);
       btn.disabled = false;
       alertDialog({ title: "Error", message: "Could not update." });
     }
@@ -628,7 +629,7 @@ async function handleAction(id, action, btn) {
         rejectionSentAt: serverTimestamp()
       });
     } catch (err) {
-      console.error(err);
+      logError('action', err);
       btn.disabled = false;
       alertDialog({ title: "Error", message: "Could not update." });
     }
@@ -648,7 +649,7 @@ async function handleAction(id, action, btn) {
         rejectionSentAt: null
       });
     } catch (err) {
-      console.error(err);
+      logError('action', err);
       btn.disabled = false;
       alertDialog({ title: "Error", message: "Could not update." });
     }
@@ -661,7 +662,7 @@ async function handleAction(id, action, btn) {
     try {
       await updateDoc(doc(db, "applications", id), { banPending: true });
     } catch (err) {
-      console.error(err);
+      logError('action', err);
       btn.disabled = false;
       alertDialog({ title: "Error", message: "Could not start ban." });
     }
@@ -673,7 +674,7 @@ async function handleAction(id, action, btn) {
     try {
       await updateDoc(doc(db, "applications", id), { banPending: false });
     } catch (err) {
-      console.error(err);
+      logError('action', err);
       btn.disabled = false;
       alertDialog({ title: "Error", message: "Could not cancel." });
     }
@@ -699,7 +700,7 @@ async function handleAction(id, action, btn) {
       });
       card.classList.add("is-leaving");
     } catch (err) {
-      console.error(err);
+      logError('action', err);
       btn.disabled = false;
       alertDialog({ title: "Error", message: "Could not mark as banned." });
     }
@@ -712,7 +713,7 @@ async function handleAction(id, action, btn) {
     try {
       await updateDoc(doc(db, "applications", id), { unbanPending: true });
     } catch (err) {
-      console.error(err);
+      logError('action', err);
       btn.disabled = false;
       alertDialog({ title: "Error", message: "Could not start unban." });
     }
@@ -724,7 +725,7 @@ async function handleAction(id, action, btn) {
     try {
       await updateDoc(doc(db, "applications", id), { unbanPending: false });
     } catch (err) {
-      console.error(err);
+      logError('action', err);
       btn.disabled = false;
       alertDialog({ title: "Error", message: "Could not cancel." });
     }
@@ -751,7 +752,7 @@ async function handleAction(id, action, btn) {
       });
       card.classList.add("is-leaving");
     } catch (err) {
-      console.error(err);
+      logError('action', err);
       btn.disabled = false;
       alertDialog({ title: "Error", message: "Could not mark as unbanned." });
     }
@@ -776,7 +777,7 @@ async function handleAction(id, action, btn) {
       await deleteDoc(doc(db, "applications", id));
       card.classList.add("is-leaving");
     } catch (err) {
-      console.error(err);
+      logError('action', err);
       btn.disabled = false;
       await alertDialog({
         title: "Delete failed",
@@ -808,7 +809,7 @@ async function handleAction(id, action, btn) {
         message: "All data for " + name + (email ? " (" + email + ")" : "") + " has been deleted."
       });
     } catch (err) {
-      console.error(err);
+      logError('action', err);
       btn.disabled = false;
       await alertDialog({
         title: "Wipe failed",

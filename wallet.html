@@ -283,19 +283,6 @@
               amount, bankRef,
               note: String(fd.get("note") || "").trim()
             });
-            const email = (user.email || "").toLowerCase();
-            const byLabel = currentName ? currentName + " (" + email + ")" : email;
-            // Notify admins via backend API
-            await notifyAdminsViaAPI({
-              message:
-                "Top-up requested\n" +
-                "From: " + byLabel + "\n" +
-                "Amount: " + formatTk(amount) + "\n" +
-                "Bank ref: " + bankRef,
-              link: "topups-admin#pending",
-              linkText: "Review",
-              type: "topup-requested"
-            });
             topupForm.reset();
             refreshRef();
             topupMsg.textContent = "✓ Request submitted. You'll see it credited once confirmed.";

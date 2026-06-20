@@ -97,14 +97,23 @@ export async function creditWallet({ userId, userEmail, amount, type, ref, note,
 export async function requestTopup({ userId, userEmail, amount, bankRef, note }) {
   const amt = Math.round(Number(amount));
   console.log("[wallet.js] requestTopup amount:", amount, "-> stored:", amt);
-  return addDoc(collection(db, "topups"), {
-    userId, userEmail,
-    amount: amt,
-    bankRef: String(bankRef || "").trim(),
-    note: String(note || "").trim(),
-    status: "pending",
-    requestedAt: serverTimestamp()
+
+  const token = await auth.currentUser.getIdToken();
+  const response = await fetch(window.location.origin + "/api/topups", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify({ action: 'create', amount: amt, bankRef: String(bankRef || "").trim() })
   });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to create top-up request');
+  }
+
+  return response.json();
 }
 
 // Admin action: confirm a pending top-up. Reads the topup doc inside a

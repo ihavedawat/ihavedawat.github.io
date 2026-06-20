@@ -2,6 +2,48 @@ import admin, { db } from './firebase-init.js';
 import { ADMIN_EMAILS } from '../js/admin-config.js';
 import { notifyAdminsInternal } from './admin.js';
 
+async function createTopupRequest(req, res, decodedToken) {
+  const userId = decodedToken.uid;
+  const userEmail = decodedToken.email;
+  const { amount, bankRef } = req.body;
+
+  if (!amount || amount <= 0) {
+    return res.status(400).json({ error: 'Invalid amount' });
+  }
+  if (!bankRef || typeof bankRef !== 'string') {
+    return res.status(400).json({ error: 'Invalid bank reference' });
+  }
+
+  try {
+    const topupRef = await db.collection('topups').add({
+      userId,
+      userEmail: userEmail.toLowerCase(),
+      amount: Number(amount),
+      bankRef: String(bankRef).substring(0, 100),
+      status: 'pending',
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    const userName = decodedToken.name || '';
+    const byLabel = userName ? `${userName} (${userEmail})` : userEmail;
+
+    notifyAdminsInternal({
+      message: `Top-up requested\nFrom: ${byLabel}\nAmount: ৳${amount}\nBank ref: ${bankRef}`,
+      link: 'topups-admin#pending',
+      linkText: 'Review',
+      type: 'topup-requested'
+    }).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      topupId: topupRef.id
+    });
+  } catch (error) {
+    const { sendErrorResponse } = await import('./error-handler.js');
+    return sendErrorResponse(res, error, 'Failed to create top-up request');
+  }
+}
+
 async function confirmTopup(req, res, decodedToken) {
   const adminEmail = decodedToken.email;
   const { topupId } = req.body;
@@ -73,14 +115,6 @@ async function confirmTopup(req, res, decodedToken) {
       };
     });
 
-    if (!result.alreadyHandled && topupData) {
-      notifyAdminsInternal({
-        message: `Topup confirmed\nUser: ${topupData.userEmail}\nAmount: ${topupData.amount}৳`,
-        link: 'topups-admin',
-        linkText: 'View topups',
-        type: 'topup-confirmed'
-      }).catch(() => {});
-    }
 
     return res.status(200).json(result);
   } catch (error) {
@@ -155,6 +189,8 @@ export default async function handler(req, res) {
   const { action } = req.body;
 
   switch (action) {
+    case 'create':
+      return createTopupRequest(req, res, decodedToken);
     case 'confirm':
       return confirmTopup(req, res, decodedToken);
     case 'reject':

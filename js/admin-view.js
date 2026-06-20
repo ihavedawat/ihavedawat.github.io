@@ -22,6 +22,7 @@ import {
   updateDoc,
   deleteDoc,
   writeBatch,
+  documentId,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { mountNotificationBell } from "./notifications.js";
@@ -112,16 +113,44 @@ async function getWalletBalanceByEmail(email) {
 async function loadWalletBalancesForPage(items) {
   const ids = [...new Set(items.map((a) => a.userId).filter(Boolean))];
   const emails = [...new Set(items.map((a) => String(a.email || "").trim().toLowerCase()).filter(Boolean))];
-  await Promise.all([
-    ...ids.map(async (userId) => {
-      walletBalancesById[userId] = await getBalance(userId);
-    }),
-    ...emails.map(async (email) => {
-      if (!(email in walletBalancesByEmail)) {
-        walletBalancesByEmail[email] = await getWalletBalanceByEmail(email);
+
+  // Batch read wallets by userId
+  if (ids.length > 0) {
+    try {
+      const walletsSnap = await getDocs(query(
+        collection(db, 'wallets'),
+        where(documentId(), 'in', ids)
+      ));
+      walletsSnap.forEach(doc => {
+        walletBalancesById[doc.id] = Number(doc.data().balance || 0);
+      });
+    } catch (err) {
+      console.error('Error batch loading wallets by ID:', err);
+    }
+  }
+
+  // Batch read wallets by email
+  if (emails.length > 0) {
+    try {
+      const emailChunks = [];
+      for (let i = 0; i < emails.length; i += 10) {
+        emailChunks.push(emails.slice(i, i + 10));
       }
-    })
-  ]);
+
+      await Promise.all(emailChunks.map(async (chunk) => {
+        const walletsSnap = await getDocs(query(
+          collection(db, 'wallets'),
+          where('email', 'in', chunk)
+        ));
+        walletsSnap.forEach(doc => {
+          const email = String(doc.data().email || '').toLowerCase();
+          if (email) walletBalancesByEmail[email] = Number(doc.data().balance || 0);
+        });
+      }));
+    } catch (err) {
+      console.error('Error batch loading wallets by email:', err);
+    }
+  }
   
   // Set up subscriptions for live updates
   items.forEach((app) => {

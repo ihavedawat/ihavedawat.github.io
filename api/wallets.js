@@ -98,6 +98,10 @@ async function refundWallet(req, res, userId, userEmail, decodedToken) {
         throw new Error('Order does not belong to this user');
       }
 
+      if (order.refunded === true) {
+        throw new Error('Order already refunded');
+      }
+
       const walletRef = db.collection('wallets').doc(userId);
       const walletSnap = await transaction.get(walletRef);
       const currentBalance = walletSnap.exists ? Number(walletSnap.data().balance || 0) : 0;
@@ -124,6 +128,11 @@ async function refundWallet(req, res, userId, userEmail, decodedToken) {
         ref: orderId,
         note: note || 'Order refund',
         createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+
+      transaction.update(orderRef, {
+        refunded: true,
+        refundedAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
       return {

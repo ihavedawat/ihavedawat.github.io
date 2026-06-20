@@ -1,6 +1,15 @@
 // Shared admin helpers: purge functions used by both admin-view.js and settings-admin.html.
 
 import { db } from "./firebase.js";
+
+export function escape(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 import {
   collection,
   query,

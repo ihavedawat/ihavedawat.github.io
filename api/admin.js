@@ -53,7 +53,6 @@ async function wipeUserData(req, res, decodedToken) {
       email = appData.email || appId;
       userId = appData.userId;
     } catch (err) {
-      console.error("Application lookup failed:", err);
       return res.status(400).json({ error: 'Application lookup failed' });
     }
   }
@@ -63,7 +62,6 @@ async function wipeUserData(req, res, decodedToken) {
       const userRecord = await admin.auth().getUser(userId);
       email = userRecord.email;
     } catch (err) {
-      console.error("User lookup failed:", err);
       return res.status(400).json({ error: 'User not found' });
     }
   }
@@ -180,7 +178,7 @@ export async function notifyAdminsInternal({ message, link = "", linkText = "", 
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
   } catch (error) {
-    console.error('Failed to notify admins:', error);
+    // Silently fail notification writes
   }
 }
 

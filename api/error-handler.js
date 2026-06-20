@@ -2,8 +2,6 @@
 // Maps error messages to appropriate HTTP status codes and user-friendly responses
 
 export function handleApiError(error, defaultMessage = 'An error occurred') {
-  console.error('API Error:', error);
-
   // Known error codes with standard responses
   const errorMap = {
     'INSUFFICIENT_FUNDS': { status: 402, message: 'Insufficient wallet balance' },

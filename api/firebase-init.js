@@ -11,7 +11,6 @@ if (!admin.apps.length) {
   try {
     credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS || '{}');
   } catch (e) {
-    console.error('Failed to parse GOOGLE_APPLICATION_CREDENTIALS:', e.message);
     throw new Error('Invalid GOOGLE_APPLICATION_CREDENTIALS JSON format');
   }
 

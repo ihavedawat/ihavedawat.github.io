@@ -18,7 +18,7 @@ export async function deleteUserDataByEmail(userEmail) {
       totalDeleted++;
     }
   } catch (err) {
-    console.error('Wallet delete failed for ' + e, err);
+    // Silently continue on wallet delete failure
   }
 
   // Delete orders, walletHistory, topups

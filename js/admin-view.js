@@ -771,13 +771,13 @@ async function handleAction(id, action, btn) {
         userId: userId || null,
         appId: id
       };
-      const response = await fetch(window.location.origin + "/api/wipeUserData", {
+      const response = await fetch(window.location.origin + "/api/user-data", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ action: 'wipe', ...payload}
       });
       if (!response.ok) {
         const data = await response.json();
@@ -819,13 +819,13 @@ async function handleAction(id, action, btn) {
         userId: userId || null,
         appId: id
       };
-      const response = await fetch(window.location.origin + "/api/wipeUserData", {
+      const response = await fetch(window.location.origin + "/api/user-data", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ action: 'wipe', ...payload}
       });
       if (!response.ok) {
         const data = await response.json();

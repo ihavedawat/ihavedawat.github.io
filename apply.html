@@ -196,10 +196,11 @@
             status:    "pending",
             createdAt: serverTimestamp()
           });
-          fetch("/api/notifyNewApplication", {
+          fetch("/api/notifications", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              action: 'notify-new-application',
               message: "New application\nBy: " + name + " (" + email + ")\nMobile: " + mobile
             })
           }).catch((e) => console.error("notify admin:", e));

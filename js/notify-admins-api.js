@@ -8,13 +8,13 @@ export async function notifyAdminsViaAPI({ message, link = "", linkText = "", ty
     if (!user) return; // Not logged in
 
     const token = await user.getIdToken();
-    const response = await fetch(window.location.origin + "/api/sendAdminNotification", {
+    const response = await fetch(window.location.origin + "/api/notifications", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`
       },
-      body: JSON.stringify({ message, link, linkText, type })
+      body: JSON.stringify({ action: 'send-admin', message, link, linkText, type })
     });
 
     if (!response.ok) {

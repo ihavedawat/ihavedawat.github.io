@@ -101,13 +101,13 @@ export async function deleteAllUsersData(token) {
   // Use backend API for bulk delete (client-side delete violates Firestore rules)
   if (!token) throw new Error('Token required for bulk delete');
 
-  const response = await fetch(window.location.origin + "/api/deleteAllUserData", {
+  const response = await fetch(window.location.origin + "/api/user-data", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${token}`
     },
-    body: JSON.stringify({ deleteAll: true })
+    body: JSON.stringify({ action: 'delete-all' })
   });
 
   if (!response.ok) {

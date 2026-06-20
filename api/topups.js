@@ -15,6 +15,7 @@ async function confirmTopup(req, res, decodedToken) {
   }
 
   try {
+    let topupData = null;
     const result = await db.runTransaction(async (transaction) => {
       const topupRef = db.collection('topups').doc(topupId);
       const topupSnap = await transaction.get(topupRef);
@@ -24,6 +25,7 @@ async function confirmTopup(req, res, decodedToken) {
       }
 
       const topup = topupSnap.data();
+      topupData = topup;
 
       if (topup.status !== 'pending') {
         return { alreadyHandled: true, status: topup.status };
@@ -71,12 +73,14 @@ async function confirmTopup(req, res, decodedToken) {
       };
     });
 
-    notifyAdminsInternal({
-      message: `Topup confirmed\nUser: ${result.userEmail}\nAmount: ${result.amount}৳`,
-      link: 'topups-admin',
-      linkText: 'View topups',
-      type: 'topup-confirmed'
-    }).catch(() => {});
+    if (!result.alreadyHandled && topupData) {
+      notifyAdminsInternal({
+        message: `Topup confirmed\nUser: ${topupData.userEmail}\nAmount: ${topupData.amount}৳`,
+        link: 'topups-admin',
+        linkText: 'View topups',
+        type: 'topup-confirmed'
+      }).catch(() => {});
+    }
 
     return res.status(200).json(result);
   } catch (error) {

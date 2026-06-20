@@ -1,26 +1,9 @@
 import { auth } from "./firebase.js";
 
-// Send admin notification via backend API (requires admin role for verification)
+// Deprecated: Notifications are now sent server-side from API endpoints
+// This function is kept for backwards compatibility but does nothing
 export async function notifyAdminsViaAPI({ message, link = "", linkText = "", type = "info" }) {
-  if (!message) return;
-  try {
-    const user = auth.currentUser;
-    if (!user) return; // Not logged in
-
-    const token = await user.getIdToken();
-    const response = await fetch(window.location.origin + "/api/admin", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify({ action: 'notify', message, link, linkText, type })
-    });
-
-    if (!response.ok) {
-      console.warn("Failed to send admin notification:", await response.json());
-    }
-  } catch (err) {
-    console.warn("Error notifying admins:", err);
-  }
+  // Server-side notifications are now handled by the API endpoints
+  // (orders.js, topups.js, etc.)
+  return;
 }

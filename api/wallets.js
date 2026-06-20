@@ -1,6 +1,6 @@
 import admin, { db } from './firebase-init.js';
 
-async function debitWallet(req, res, userId, userEmail, decodedToken) {
+async function debitWallet(req, res, userId, userEmail) {
   const { amount, orderId, note } = req.body;
 
   if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
@@ -83,7 +83,7 @@ async function debitWallet(req, res, userId, userEmail, decodedToken) {
   }
 }
 
-async function refundWallet(req, res, userId, userEmail, decodedToken) {
+async function refundWallet(req, res, userId, userEmail) {
   const { amount, orderId, note } = req.body;
 
   if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
@@ -181,9 +181,9 @@ export default async function handler(req, res) {
 
   switch (action) {
     case 'debit':
-      return debitWallet(req, res, userId, userEmail, decodedToken);
+      return debitWallet(req, res, userId, userEmail);
     case 'refund':
-      return refundWallet(req, res, userId, userEmail, decodedToken);
+      return refundWallet(req, res, userId, userEmail);
     default:
       return res.status(400).json({ error: 'Invalid action' });
   }

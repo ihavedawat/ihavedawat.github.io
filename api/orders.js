@@ -2,7 +2,7 @@ import admin, { db } from './firebase-init.js';
 import { notifyAdminsInternal } from './admin.js';
 import { formatOrderNotification } from './format-notification.js';
 
-async function placeOrder(req, res, userId, userEmail, decodedToken) {
+async function placeOrder(req, res, userId, userEmail) {
   const { items, forDate, clientTotal } = req.body;
 
   if (!items || !Array.isArray(items) || !items.length) {
@@ -139,7 +139,7 @@ async function placeOrder(req, res, userId, userEmail, decodedToken) {
   }
 }
 
-async function cancelOrder(req, res, userId, userEmail, decodedToken) {
+async function cancelOrder(req, res, userId, userEmail) {
   const { orderId } = req.body;
 
   if (!orderId) {
@@ -223,7 +223,7 @@ async function cancelOrder(req, res, userId, userEmail, decodedToken) {
   }
 }
 
-async function editOrder(req, res, userId, userEmail, decodedToken) {
+async function editOrder(req, res, userId, userEmail) {
   const { orderId, items, total } = req.body;
 
   if (!orderId || !items || total === undefined) {
@@ -347,11 +347,11 @@ export default async function handler(req, res) {
 
   switch (action) {
     case 'place':
-      return placeOrder(req, res, userId, userEmail, decodedToken);
+      return placeOrder(req, res, userId, userEmail);
     case 'cancel':
-      return cancelOrder(req, res, userId, userEmail, decodedToken);
+      return cancelOrder(req, res, userId, userEmail);
     case 'edit':
-      return editOrder(req, res, userId, userEmail, decodedToken);
+      return editOrder(req, res, userId, userEmail);
     default:
       return res.status(400).json({ error: 'Invalid action' });
   }

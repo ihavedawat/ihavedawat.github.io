@@ -24,7 +24,7 @@ export function escapeHtml(s) {
 
 export const escape = escapeHtml;
 
-export async function purgeOrdersForEmail(email) {
+export async function deleteOrdersForEmail(email) {
   const e = String(email || "").toLowerCase();
   if (!e) return;
   const snap = await getDocs(query(collection(db, "orders"), where("userEmail", "==", e)));
@@ -34,7 +34,7 @@ export async function purgeOrdersForEmail(email) {
   await batch.commit();
 }
 
-export async function purgeAllUserDataForEmail(email) {
+export async function deleteAllUserDataForEmail(email) {
   const e = String(email || "").toLowerCase();
   if (!e) return;
   let foundUid = null;
@@ -97,7 +97,7 @@ export async function purgeAllUserDataForEmail(email) {
   }
 }
 
-export async function purgeAllUsersData(token) {
+export async function deleteAllUsersData(token) {
   // Use backend API for bulk purge (client-side purge violates Firestore rules)
   if (!token) throw new Error('Token required for bulk purge');
 

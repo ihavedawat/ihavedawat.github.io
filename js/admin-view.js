@@ -28,7 +28,7 @@ import { mountNotificationBell } from "./notifications.js";
 import { confirmDialog, typeToConfirmDialog, alertDialog, passwordConfirmDialog } from "./modal.js";
 import { show404, formatTk } from "./app-utils.js";
 import { getBalance, subscribeWallet } from "./wallet.js";
-import { escape, purgeOrdersForEmail } from "./admin-helpers.js";
+import { escape, deleteOrdersForEmail } from "./admin-helpers.js";
 
 // Verify the currently-signed-in admin's password. Used to gate the
 // most destructive actions (Wipe data, Clear all). Returns true on
@@ -652,7 +652,7 @@ async function handleAction(id, action, btn) {
     }))) return;
     btn.disabled = true;
     try {
-      await purgeOrdersForEmail(card.dataset.email || "");
+      await deleteOrdersForEmail(card.dataset.email || "");
       await updateDoc(doc(db, "applications", id), {
         status:     "banned",
         banPending: false,

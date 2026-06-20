@@ -46,7 +46,7 @@ export async function notifyAdmins({ message, link = "", linkText = "", type = "
   });
 }
 
-const BLIP_URL = "./minecraft-villager-sound-effect.mp3";
+const BLIP_URL = "./assets/sounds/notification.mp3";
 let blipAudio = null;
 function playBlip() {
   try {

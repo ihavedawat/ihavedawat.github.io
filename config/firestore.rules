@@ -28,7 +28,10 @@ service cloud.firestore {
     match /applications/{appId} {
       allow create: if true;
       allow read: if true;
-      allow update: if request.auth != null && (isAdmin(request.auth.token.email) || request.resource.data.email == request.auth.token.email);
+      allow update: if request.auth != null &&
+        (isAdmin(request.auth.token.email) ||
+         (request.resource.data.email == request.auth.token.email &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'mobile', 'office', 'address'])));
       allow delete: if request.auth != null && isAdmin(request.auth.token.email);
     }
 

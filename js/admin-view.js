@@ -771,13 +771,13 @@ async function handleAction(id, action, btn) {
         userId: userId || null,
         appId: id
       };
-      const response = await fetch(window.location.origin + "/api/wipeUserData", {
+      const response = await fetch(window.location.origin + "/api/admin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ ...payload, action: 'wipe' })
       });
       if (!response.ok) {
         const data = await response.json();
@@ -815,11 +815,12 @@ async function handleAction(id, action, btn) {
       const token = await auth.currentUser?.getIdToken();
       if (!token) throw new Error('Not authenticated');
       const payload = {
+        action: 'wipe',
         email: email || null,
         userId: userId || null,
         appId: id
       };
-      const response = await fetch(window.location.origin + "/api/wipeUserData", {
+      const response = await fetch(window.location.origin + "/api/admin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

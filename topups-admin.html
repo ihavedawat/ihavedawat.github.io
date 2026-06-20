@@ -235,13 +235,13 @@
             if (!token) {
               throw new Error('User not authenticated');
             }
-            const response = await fetch(window.location.origin + "/api/confirmTopup", {
+            const response = await fetch(window.location.origin + "/api/topups", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
               },
-              body: JSON.stringify({ topupId: t.id })
+              body: JSON.stringify({ action: 'confirm', topupId: t.id })
             });
             if (!response.ok) {
               const data = await response.json();
@@ -281,13 +281,13 @@
             if (!token) {
               throw new Error('User not authenticated');
             }
-            const response = await fetch(window.location.origin + "/api/rejectTopup", {
+            const response = await fetch(window.location.origin + "/api/topups", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
               },
-              body: JSON.stringify({ topupId: t.id })
+              body: JSON.stringify({ action: 'reject', topupId: t.id })
             });
             if (!response.ok) {
               const data = await response.json();

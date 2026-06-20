@@ -315,13 +315,14 @@
             // Call secure server-side order placement
             // Server validates menu items, calculates total, debits wallet in transaction
             const token = await currentUser.getIdToken();
-            const response = await fetch('/api/placeOrder', {
+            const response = await fetch('/api/orders', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
               },
               body: JSON.stringify({
+                action: 'place',
                 items: items.map(it => ({ mealId: it.mealId, qty: it.qty })),
                 forDate: key,
                 clientTotal: total

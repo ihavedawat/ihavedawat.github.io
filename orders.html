@@ -281,13 +281,14 @@
             // Use secure API to update order and wallet
             try {
               const token = await auth.currentUser.getIdToken();
-              const response = await fetch(window.location.origin + "/api/editOrder", {
+              const response = await fetch(window.location.origin + "/api/orders", {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
                   "Authorization": `Bearer ${token}`
                 },
                 body: JSON.stringify({
+                  action: 'edit',
                   orderId: o.id,
                   items,
                   total
@@ -389,13 +390,14 @@
             if (!token) {
               throw new Error('User not authenticated');
             }
-            const response = await fetch(window.location.origin + "/api/cancelOrder", {
+            const response = await fetch(window.location.origin + "/api/orders", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`
               },
               body: JSON.stringify({
+                action: 'cancel',
                 orderId: delBtn.dataset.orderId
               })
             });

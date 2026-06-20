@@ -11,7 +11,7 @@
 //                          status: "pending"|"confirmed"|"rejected",
 //                          requestedAt, confirmedAt, adminEmail }
 
-import { db } from "./firebase.js";
+import { db, auth } from "./firebase.js";
 import {
   doc, getDoc, setDoc, onSnapshot,
   collection, addDoc, runTransaction, serverTimestamp

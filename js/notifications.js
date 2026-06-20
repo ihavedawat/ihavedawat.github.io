@@ -54,11 +54,18 @@ function playBlip() {
       blipAudio = new Audio(BLIP_URL);
       blipAudio.preload = "auto";
       blipAudio.volume = 0.7;
+      blipAudio.muted = false;
     }
     blipAudio.currentTime = 0;
     const p = blipAudio.play();
-    if (p && typeof p.catch === "function") p.catch(() => {});
-  } catch {}
+    if (p && typeof p.catch === "function") {
+      p.catch((err) => {
+        console.warn("Notification sound blocked by browser:", err.name, err.message);
+      });
+    }
+  } catch (err) {
+    console.error("Notification sound error:", err);
+  }
 }
 
 function fmtWhen(ts) {

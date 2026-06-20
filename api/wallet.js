@@ -64,6 +64,12 @@ export default async function handler(req, res) {
         historyType = 'order_debit';
         historyAmount = -amount;
       } else if (action === 'refund') {
+        if (order.status !== 'cancelled') {
+          throw new Error('Order must be cancelled to refund');
+        }
+        if (amount !== Number(order.total || 0)) {
+          throw new Error('Refund amount must match original order total');
+        }
         newBalance = currentBalance + amount;
         historyType = 'order_refund';
         historyAmount = amount;

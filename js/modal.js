@@ -1,5 +1,13 @@
-// Modal dialogs: confirmDialog, alertDialog, typeToConfirmDialog, passwordConfirmDialog
-// Single backdrop element, managed globally for accessibility
+// Tiny in-page modal helper. Replaces the OS confirm()/prompt() dialogs
+// with a styled overlay that fits the rest of the site.
+//
+// Exports:
+//   confirmDialog({title, message, confirmLabel?, cancelLabel?, danger?})
+//     → Promise<boolean>
+//   typeToConfirmDialog({title, message, expected, confirmLabel?, cancelLabel?, danger?})
+//     → Promise<boolean>  (true only when typed value === expected)
+//
+// Messages may contain "\n" for line breaks.
 
 let backdrop = null;
 let activeResolve = null;
@@ -37,9 +45,12 @@ function close(result) {
 }
 
 function escape(s) {
-  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  })[c]);
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function renderMessage(msg) {
@@ -81,6 +92,7 @@ export function confirmDialog({
   });
 }
 
+// Convenience: single-button "alert" dialog. Returns when the user closes it.
 export function alertDialog({ title = "Notice", message = "", confirmLabel = "OK" } = {}) {
   return confirmDialog({ title, message, confirmLabel, hideCancel: true });
 }
@@ -131,6 +143,11 @@ export function typeToConfirmDialog({
   });
 }
 
+// Password-gated confirm. Caller supplies a `verify(password)` async fn
+// that returns true on success, false on bad password, or throws on
+// unexpected error. The dialog stays open and shows an inline error
+// when verify() returns false, so the admin can retry without losing
+// the modal context.
 export function passwordConfirmDialog({
   title = "Confirm",
   message = "",
@@ -187,6 +204,7 @@ export function passwordConfirmDialog({
           input.focus();
         }
       } catch (err) {
+        console.error("passwordConfirmDialog verify:", err);
         errEl.textContent = "Could not verify. Check your connection and try again.";
         errEl.hidden = false;
         okBtn.disabled = !input.value;

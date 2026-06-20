@@ -1,5 +1,4 @@
-// Admin helpers: utility functions for admin operations
-// Used by settings-admin.html and admin-view.js
+// Shared admin helpers: purge functions used by both admin-view.js and settings-admin.html.
 
 import { db } from "./firebase.js";
 import {
@@ -11,50 +10,22 @@ import {
   writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-const FIRESTORE_BATCH_LIMIT = 450;
-
-export function escapeHtml(s) {
-  return String(s ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-export const escape = escapeHtml;
-
-export async function deleteOrdersForEmail(email) {
-  const e = String(email || "").toLowerCase();
-  if (!e) return;
-  const snap = await getDocs(query(collection(db, "orders"), where("userEmail", "==", e)));
-  if (snap.empty) return;
-  const batch = writeBatch(db);
-  snap.docs.forEach((d) => batch.delete(d.ref));
-  await batch.commit();
-}
-
-export async function deleteAllUserDataForEmail(email) {
+// Purge all data for a specific user email. Deletes wallets, orders,
+// wallet history, top-ups, and notifications for that email.
+export async function purgeAllUserDataForEmail(email) {
   const e = String(email || "").toLowerCase();
   if (!e) return;
   let foundUid = null;
-
   try {
     const wsnap = await getDocs(query(collection(db, "wallets"), where("email", "==", e)));
     for (const d of wsnap.docs) {
       if (!foundUid) foundUid = d.id;
       await deleteDoc(d.ref);
     }
-  } catch (err) {
-    console.error("Wallet delete failed for " + e, err);
-  }
-
+  } catch (err) { console.error("wallets:", err); }
   const cols = ["orders", "walletHistory", "topups"];
-  const collectionSnaps = await Promise.all(
-    cols.map(col => getDocs(query(collection(db, col), where("userEmail", "==", e))))
-  );
-
-  for (const snap of collectionSnaps) {
+  for (const col of cols) {
+    const snap = await getDocs(query(collection(db, col), where("userEmail", "==", e)));
     if (snap.empty) continue;
     if (!foundUid) {
       const withUid = snap.docs.find((d) => d.data().userId);
@@ -65,11 +36,10 @@ export async function deleteAllUserDataForEmail(email) {
     for (const d of snap.docs) {
       batch.delete(d.ref);
       n++;
-      if (n >= FIRESTORE_BATCH_LIMIT) { await batch.commit(); batch = writeBatch(db); n = 0; }
+      if (n >= 450) { await batch.commit(); batch = writeBatch(db); n = 0; }
     }
     if (n) await batch.commit();
   }
-
   const seen = new Set();
   const deleteSnap = async (snap) => {
     if (snap.empty) return;
@@ -81,39 +51,45 @@ export async function deleteAllUserDataForEmail(email) {
       if (!foundUid && d.data().userId) foundUid = d.data().userId;
       batch.delete(d.ref);
       n++;
-      if (n >= FIRESTORE_BATCH_LIMIT) { await batch.commit(); batch = writeBatch(db); n = 0; }
+      if (n >= 450) { await batch.commit(); batch = writeBatch(db); n = 0; }
     }
     if (n) await batch.commit();
   };
-
-  const notifSnaps = await Promise.all([
-    getDocs(query(collection(db, "notifications"), where("userEmail", "==", e))),
-    foundUid ? getDocs(query(collection(db, "notifications"), where("userId", "==", foundUid))) : Promise.resolve(null)
-  ]);
-
-  await deleteSnap(notifSnaps[0]);
-  if (notifSnaps[1]) {
-    await deleteSnap(notifSnaps[1]);
+  await deleteSnap(await getDocs(query(collection(db, "notifications"), where("userEmail", "==", e))));
+  if (foundUid) {
+    await deleteSnap(await getDocs(query(collection(db, "notifications"), where("userId", "==", foundUid))));
   }
 }
 
-export async function deleteAllUsersData(token) {
-  // Use backend API for bulk delete (client-side delete violates Firestore rules)
-  if (!token) throw new Error('Token required for bulk delete');
+// Purge all user data (excluding admins). Fetches all applications,
+// collects their emails (excluding admin emails), and purges each user's data.
+export async function purgeAllUsersData(excludeEmails = []) {
+  const excluded = new Set((excludeEmails || []).map((e) => String(e || "").toLowerCase()));
+  const allEmails = new Set();
 
-  const response = await fetch(window.location.origin + "/api/admin", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    },
-    body: JSON.stringify({ action: 'delete-all', deleteAll: true })
-  });
-
-  if (!response.ok) {
-    const data = await response.json();
-    throw new Error(data.error || 'Failed to delete data');
+  try {
+    const snap = await getDocs(collection(db, "applications"));
+    snap.docs.forEach((d) => {
+      const email = String(d.data().email || "").toLowerCase();
+      if (email && !excluded.has(email)) {
+        allEmails.add(email);
+      }
+    });
+  } catch (err) {
+    console.error("Error fetching applications:", err);
+    throw err;
   }
 
-  return (await response.json()).totalDeleted;
+  // Purge each user's data
+  let count = 0;
+  for (const email of allEmails) {
+    try {
+      await purgeAllUserDataForEmail(email);
+      count++;
+    } catch (err) {
+      console.error("Error purging user " + email + ":", err);
+    }
+  }
+
+  return count;
 }

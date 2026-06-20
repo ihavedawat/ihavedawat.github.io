@@ -1,6 +1,15 @@
-// In-app notification system. Stores in Firestore, displays in bell icon
-// Schema: notifications/{auto} - userId, userEmail, audience ("user"|"admin"),
-//         message, link (optional href), linkText, type, read, createdAt
+// Lightweight in-app notifications.
+// Firestore schema — notifications/{auto}:
+//   userId    : string  (target user uid; "" when audience="admin")
+//   userEmail : string  (target user email; helps with wipe-by-email)
+//   audience  : string  ("user" by default, or "admin" for admin-only)
+//   message   : string  (one-line summary)
+//   link      : string  (optional href, e.g. "wallet.html#history")
+//   linkText  : string  (optional cta label, defaults to "View")
+//   type      : string  ("topup-confirmed" | "topup-declined" |
+//                        "topup-requested" | "order-placed" | ...)
+//   read      : boolean
+//   createdAt : serverTimestamp
 
 import { db } from "./firebase.js";
 import {
@@ -9,10 +18,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { confirmDialog } from "./modal.js";
 import { ADMIN_EMAILS } from "./admin-config.js";
-import { escapeHtml } from "./admin-helpers.js";
 
 const BELL_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
-const FIRESTORE_BATCH_LIMIT = 450;
 
 export async function notify({ userId, userEmail = "", message, link = "", linkText = "", type = "info" }) {
   if (!userId || !message) return;
@@ -26,7 +33,7 @@ export async function notify({ userId, userEmail = "", message, link = "", linkT
   });
 }
 
-// Send notification to all signed-in admins (audience="admin")
+// Fire-and-forget admin notification. Visible in the bell of any signed-in admin.
 export async function notifyAdmins({ message, link = "", linkText = "", type = "info" }) {
   if (!message) return;
   await addDoc(collection(db, "notifications"), {
@@ -39,7 +46,7 @@ export async function notifyAdmins({ message, link = "", linkText = "", type = "
   });
 }
 
-const BLIP_URL = "../assets/sounds/notification.mp3";
+const BLIP_URL = "./minecraft-villager-sound-effect.mp3";
 let blipAudio = null;
 function playBlip() {
   try {
@@ -65,7 +72,12 @@ function fmtWhen(ts) {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 }
 
-// Mount bell icon + notification panel (listens to user and admin notifications)
+function escape(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[c]);
+}
+
 export function mountNotificationBell({ user }) {
   if (!user || document.getElementById("notif-bell")) return;
   const isAdmin = ADMIN_EMAILS.includes((user.email || "").toLowerCase());
@@ -143,11 +155,11 @@ export function mountNotificationBell({ user }) {
     const shown = rows.slice(start, start + PAGE_SIZE);
     const items = shown.map((r) => {
       const when = fmtWhen(r.createdAt);
-      const cls = "notif-item" + (r.read ? "" : " is-unread") + " type-" + escapeHtml(r.type || "info");
+      const cls = "notif-item" + (r.read ? "" : " is-unread") + " type-" + escape(r.type || "info");
       const link = r.link
-        ? ` <a class="notif-link" href="${escapeHtml(r.link)}">${escapeHtml(r.linkText || "View")}</a>`
+        ? ` <a class="notif-link" href="${escape(r.link)}">${escape(r.linkText || "View")}</a>`
         : "";
-      return `<li class="${cls}"><span class="notif-msg">${escapeHtml(r.message).replace(/\n/g, "<br>")}</span>${link}<span class="notif-when">${when}</span></li>`;
+      return `<li class="${cls}"><span class="notif-msg">${escape(r.message).replace(/\n/g, "<br>")}</span>${link}<span class="notif-when">${when}</span></li>`;
     }).join("");
     const pager = totalPages > 1
       ? `<li class="notif-pager">
@@ -215,7 +227,7 @@ export function mountNotificationBell({ user }) {
         if (row) row.read = true;
       }
     });
-    markIdsRead(idsToMark).catch(() => {});
+    markIdsRead(idsToMark).catch((err) => console.error("mark read:", err));
   }
 
   btn.addEventListener("click", (e) => {
@@ -242,7 +254,7 @@ export function mountNotificationBell({ user }) {
       danger: true
     });
     if (!ok) return;
-    clearAll({ userId: user.uid, includeAdmin: isAdmin }).catch(() => {});
+    clearAll({ userId: user.uid, includeAdmin: isAdmin }).catch((err) => console.error("clear:", err));
   });
 
   function attach(qRef, key, isFirst) {
@@ -257,7 +269,7 @@ export function mountNotificationBell({ user }) {
       }
       rowsByQuery[key] = incoming;
       render();
-    }, () => {});
+    }, (err) => console.error("notifications " + key + ":", err));
   }
 
   attach(
@@ -281,8 +293,8 @@ export async function markAllRead({ userId, includeAdmin = false }) {
   if (includeAdmin) {
     queries.push(query(collection(db, "notifications"), where("audience", "==", "admin"), limit(200)));
   }
-  const snaps = await Promise.all(queries.map(q => getDocs(q)));
-  for (const snap of snaps) {
+  for (const q of queries) {
+    const snap = await getDocs(q);
     if (snap.empty) continue;
     const batch = writeBatch(db);
     let n = 0;
@@ -315,9 +327,9 @@ export async function clearAll({ userId, includeAdmin = false }) {
   if (includeAdmin) {
     queries.push(query(collection(db, "notifications"), where("audience", "==", "admin"), limit(200)));
   }
-  const snaps = await Promise.all(queries.map(q => getDocs(q)));
   const seen = new Set();
-  for (const snap of snaps) {
+  for (const q of queries) {
+    const snap = await getDocs(q);
     if (snap.empty) continue;
     let batch = writeBatch(db);
     let n = 0;
@@ -326,7 +338,7 @@ export async function clearAll({ userId, includeAdmin = false }) {
       seen.add(d.id);
       batch.delete(d.ref);
       n++;
-      if (n >= FIRESTORE_BATCH_LIMIT) { await batch.commit(); batch = writeBatch(db); n = 0; }
+      if (n >= 450) { await batch.commit(); batch = writeBatch(db); n = 0; }
     }
     if (n) await batch.commit();
   }

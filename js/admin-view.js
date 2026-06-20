@@ -22,14 +22,12 @@ import {
   updateDoc,
   deleteDoc,
   writeBatch,
-  documentId,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { mountNotificationBell } from "./notifications.js";
 import { confirmDialog, typeToConfirmDialog, alertDialog, passwordConfirmDialog } from "./modal.js";
 import { show404, formatTk } from "./app-utils.js";
 import { getBalance, subscribeWallet } from "./wallet.js";
-import { escape, deleteOrdersForEmail } from "./admin-helpers.js";
 
 // Verify the currently-signed-in admin's password. Used to gate the
 // most destructive actions (Wipe data, Clear all). Returns true on
@@ -62,8 +60,6 @@ const GROUPS = {
   applications: ["pending", "approved", "rejected"],
   users:        ["customer", "banned"]
 };
-
-const COPY_FEEDBACK_TIMEOUT_MS = 1200;
 
 const group = document.body.dataset.group;
 if (!GROUPS[group]) {
@@ -113,44 +109,16 @@ async function getWalletBalanceByEmail(email) {
 async function loadWalletBalancesForPage(items) {
   const ids = [...new Set(items.map((a) => a.userId).filter(Boolean))];
   const emails = [...new Set(items.map((a) => String(a.email || "").trim().toLowerCase()).filter(Boolean))];
-
-  // Batch read wallets by userId
-  if (ids.length > 0) {
-    try {
-      const walletsSnap = await getDocs(query(
-        collection(db, 'wallets'),
-        where(documentId(), 'in', ids)
-      ));
-      walletsSnap.forEach(doc => {
-        walletBalancesById[doc.id] = Number(doc.data().balance || 0);
-      });
-    } catch (err) {
-      console.error('Error batch loading wallets by ID:', err);
-    }
-  }
-
-  // Batch read wallets by email
-  if (emails.length > 0) {
-    try {
-      const emailChunks = [];
-      for (let i = 0; i < emails.length; i += 10) {
-        emailChunks.push(emails.slice(i, i + 10));
+  await Promise.all([
+    ...ids.map(async (userId) => {
+      walletBalancesById[userId] = await getBalance(userId);
+    }),
+    ...emails.map(async (email) => {
+      if (!(email in walletBalancesByEmail)) {
+        walletBalancesByEmail[email] = await getWalletBalanceByEmail(email);
       }
-
-      await Promise.all(emailChunks.map(async (chunk) => {
-        const walletsSnap = await getDocs(query(
-          collection(db, 'wallets'),
-          where('email', 'in', chunk)
-        ));
-        walletsSnap.forEach(doc => {
-          const email = String(doc.data().email || '').toLowerCase();
-          if (email) walletBalancesByEmail[email] = Number(doc.data().balance || 0);
-        });
-      }));
-    } catch (err) {
-      console.error('Error batch loading wallets by email:', err);
-    }
-  }
+    })
+  ]);
   
   // Set up subscriptions for live updates
   items.forEach((app) => {
@@ -211,16 +179,6 @@ FILTERS.forEach(f => {
   filterCounts[f] = 0;
 });
 syncPills();
-
-// Apply client-side filter transformations based on tab
-function applyClientFilter(items, filter) {
-  if (filter === "approved") {
-    return items.filter((a) => !a.credsIssued || a.mustChangePassword !== false);
-  } else if (filter === "customer") {
-    return items.filter((a) => !!a.credsIssued && a.mustChangePassword === false);
-  }
-  return items;
-}
 
 // ----- Sign out -----
 signoutBtn.addEventListener("click", async () => {
@@ -297,7 +255,11 @@ function subscribeToApplications(filter) {
       q,
       (snap) => {
         let items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        items = applyClientFilter(items, f);
+        if (f === "approved") {
+          items = items.filter((a) => !a.credsIssued || a.mustChangePassword !== false);
+        } else if (f === "customer") {
+          items = items.filter((a) => !!a.credsIssued && a.mustChangePassword === false);
+        }
         filterCounts[f] = items.length;
         syncPills();
       },
@@ -316,7 +278,11 @@ function subscribeToApplications(filter) {
     q,
     (snap) => {
       let items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      items = applyClientFilter(items, filter);
+      if (filter === "approved") {
+        items = items.filter((a) => !a.credsIssued || a.mustChangePassword !== false);
+      } else if (filter === "customer") {
+        items = items.filter((a) => !!a.credsIssued && a.mustChangePassword === false);
+      }
       items.sort((a, b) => {
         const ta = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
         const tb = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
@@ -490,7 +456,7 @@ function cardHTML(app) {
     ? ` <span class="card-balance" ${app.userId ? `data-user-id="${app.userId}"` : `data-email="${emailKey}"`}>(${formatTk(walletBalance ?? 0)})</span>`
     : "";
   return `
-    <article class="app-card" data-id="${app.id}" data-email="${escape((app.email || "").toLowerCase())}" data-user-id="${escape(app.userId || "")}" data-name="${escape(app.name || "(no name)")}">
+    <article class="app-card" data-id="${app.id}" data-email="${escape((app.email || "").toLowerCase())}" data-name="${escape(app.name || "(no name)")}">
       <header class="card-head">
         <span class="card-name">${escape(app.name || "(no name)")}${walletLabel}</span>
         <div class="card-head-right">
@@ -543,6 +509,73 @@ function gmailHref(app, kind) {
     "&body=" + encodeURIComponent(bodyText);
 }
 
+function escape(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+async function purgeOrdersForEmail(email) {
+  const e = String(email || "").toLowerCase();
+  if (!e) return;
+  const snap = await getDocs(query(collection(db, "orders"), where("userEmail", "==", e)));
+  if (snap.empty) return;
+  const batch = writeBatch(db);
+  snap.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+}
+
+async function purgeAllUserDataForEmail(email) {
+  const e = String(email || "").toLowerCase();
+  if (!e) return;
+  let foundUid = null;
+  try {
+    const wsnap = await getDocs(query(collection(db, "wallets"), where("email", "==", e)));
+    for (const d of wsnap.docs) {
+      if (!foundUid) foundUid = d.id;
+      await deleteDoc(d.ref);
+    }
+  } catch (err) { console.error("wallets:", err); }
+  const cols = ["orders", "walletHistory", "topups"];
+  for (const col of cols) {
+    const snap = await getDocs(query(collection(db, col), where("userEmail", "==", e)));
+    if (snap.empty) continue;
+    if (!foundUid) {
+      const withUid = snap.docs.find((d) => d.data().userId);
+      if (withUid) foundUid = withUid.data().userId;
+    }
+    let batch = writeBatch(db);
+    let n = 0;
+    for (const d of snap.docs) {
+      batch.delete(d.ref);
+      n++;
+      if (n >= 450) { await batch.commit(); batch = writeBatch(db); n = 0; }
+    }
+    if (n) await batch.commit();
+  }
+  const seen = new Set();
+  const deleteSnap = async (snap) => {
+    if (snap.empty) return;
+    let batch = writeBatch(db);
+    let n = 0;
+    for (const d of snap.docs) {
+      if (seen.has(d.id)) continue;
+      seen.add(d.id);
+      if (!foundUid && d.data().userId) foundUid = d.data().userId;
+      batch.delete(d.ref);
+      n++;
+      if (n >= 450) { await batch.commit(); batch = writeBatch(db); n = 0; }
+    }
+    if (n) await batch.commit();
+  };
+  await deleteSnap(await getDocs(query(collection(db, "notifications"), where("userEmail", "==", e))));
+  if (foundUid) {
+    await deleteSnap(await getDocs(query(collection(db, "notifications"), where("userId", "==", foundUid))));
+  }
+}
 
 async function handleAction(id, action, btn) {
   const card = btn.closest(".app-card");
@@ -681,7 +714,7 @@ async function handleAction(id, action, btn) {
     }))) return;
     btn.disabled = true;
     try {
-      await deleteOrdersForEmail(card.dataset.email || "");
+      await purgeOrdersForEmail(card.dataset.email || "");
       await updateDoc(doc(db, "applications", id), {
         status:     "banned",
         banPending: false,
@@ -752,7 +785,6 @@ async function handleAction(id, action, btn) {
   if (action === "delete") {
     const name = card.querySelector(".card-name").textContent;
     const email = card.dataset.email || "";
-    const userId = card.dataset.userId || "";
     const ok = await passwordConfirmDialog({
       title: "Delete application",
       message:
@@ -764,25 +796,7 @@ async function handleAction(id, action, btn) {
     if (!ok) return;
     btn.disabled = true;
     try {
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) throw new Error('Not authenticated');
-      const payload = {
-        email: email || null,
-        userId: userId || null,
-        appId: id
-      };
-      const response = await fetch(window.location.origin + "/api/admin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ ...payload, action: 'wipe' })
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to wipe data');
-      }
+      await purgeAllUserDataForEmail(email);
       await deleteDoc(doc(db, "applications", id));
       card.classList.add("is-leaving");
     } catch (err) {
@@ -799,7 +813,6 @@ async function handleAction(id, action, btn) {
   if (action === "wipe-data") {
     const name = card.dataset.name;
     const email = card.dataset.email || "";
-    const userId = card.dataset.userId || "";
     const ok = await passwordConfirmDialog({
       title: "Wipe data for " + name,
       message:
@@ -812,26 +825,7 @@ async function handleAction(id, action, btn) {
     if (!ok) return;
     btn.disabled = true;
     try {
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) throw new Error('Not authenticated');
-      const payload = {
-        action: 'wipe',
-        email: email || null,
-        userId: userId || null,
-        appId: id
-      };
-      const response = await fetch(window.location.origin + "/api/admin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to wipe data');
-      }
+      await purgeAllUserDataForEmail(email);
       btn.disabled = false;
       await alertDialog({
         title: "Wiped",
@@ -902,7 +896,7 @@ listEl.addEventListener("click", async (e) => {
   setTimeout(() => {
     btn.innerHTML = ICON_COPY;
     btn.classList.remove("is-copied");
-  }, COPY_FEEDBACK_TIMEOUT_MS);
+  }, 1200);
 });
 
 // Clear-all: bulk-delete every doc currently shown on the active tab.

@@ -7,7 +7,7 @@ async function createTopupRequest(req, res, decodedToken) {
   const userEmail = decodedToken.email;
   const { amount, bankRef } = req.body;
 
-  if (!amount || amount <= 0) {
+  if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
     return res.status(400).json({ error: 'Invalid amount' });
   }
   if (!bankRef || typeof bankRef !== 'string') {

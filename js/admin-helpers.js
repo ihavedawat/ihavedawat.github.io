@@ -97,7 +97,32 @@ export async function purgeAllUserDataForEmail(email) {
   }
 }
 
-export async function purgeAllUsersData(excludeEmails = []) {
+export async function purgeAllUsersData(excludeEmails = [], getAuthToken = null) {
+  // If getAuthToken is provided, use backend API for bulk purge
+  if (getAuthToken) {
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Not authenticated');
+      const response = await fetch(window.location.origin + "/api/purgeAllUserData", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ purgeAll: true })
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to purge data');
+      }
+      return (await response.json()).totalPurged;
+    } catch (err) {
+      console.error("Bulk purge via API failed:", err);
+      throw err;
+    }
+  }
+
+  // Fallback to client-side purge (for backward compatibility)
   const excluded = new Set((excludeEmails || []).map((e) => String(e || "").toLowerCase()));
   const allEmails = new Set();
 

@@ -221,7 +221,7 @@
 
         try {
           // Purge all user data (excluding admins)
-          const count = await purgeAllUsersData(ADMIN_EMAILS);
+          const count = await purgeAllUsersData(ADMIN_EMAILS, () => auth.currentUser?.getIdToken());
           wipeAllBtn.disabled = false;
           await alertDialog({
             title: "Wiped",

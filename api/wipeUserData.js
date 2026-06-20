@@ -134,7 +134,8 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       message: `Wiped user data for ${userEmail}`,
-      totalDeleted
+      totalDeleted,
+      email: userEmail
     });
   } catch (error) {
     console.error('Wipe user data error:', error);

@@ -183,7 +183,7 @@ export async function show404() {
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&display=swap">
-          <link rel="stylesheet" href="style.css">
+          <link rel="stylesheet" href="css/style.css">
           <style>
             body { padding: 40px; text-align: center; }
           </style>

@@ -3,7 +3,7 @@ import { ADMIN_EMAILS } from '../js/admin-config.js';
 
 const FIRESTORE_BATCH_LIMIT = 450;
 
-async function purgeUserDataByEmail(userEmail) {
+async function deleteUserDataByEmail(userEmail) {
   const e = String(userEmail || '').toLowerCase();
   if (!e) return 0;
 
@@ -19,7 +19,7 @@ async function purgeUserDataByEmail(userEmail) {
       totalDeleted++;
     }
   } catch (err) {
-    console.error('Wallet purge failed for ' + e, err);
+    console.error('Wallet delete failed for ' + e, err);
   }
 
   // Delete orders, walletHistory, topups
@@ -105,30 +105,30 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Not authorized' });
   }
 
-  const { purgeAll } = req.body;
+  const { deleteAll } = req.body;
 
   try {
-    let totalPurged = 0;
+    let totalDeleted = 0;
 
-    if (purgeAll) {
-      // Purge all users
+    if (deleteAll) {
+      // Delete all users
       const appSnap = await db.collection('applications').get();
       for (const doc of appSnap.docs) {
         const email = String(doc.data().email || '').toLowerCase();
         if (email) {
-          const count = await purgeUserDataByEmail(email);
-          totalPurged += count;
+          const count = await deleteUserDataByEmail(email);
+          totalDeleted += count;
         }
       }
     }
 
     return res.status(200).json({
       success: true,
-      message: purgeAll ? 'Purged all user data' : 'Done',
-      totalPurged
+      message: deleteAll ? 'Deleted all user data' : 'Done',
+      totalDeleted
     });
   } catch (error) {
-    console.error('Purge all user data error:', error);
-    return res.status(500).json({ error: error.message || 'Failed to purge data' });
+    console.error('Delete all user data error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to delete data' });
   }
 }

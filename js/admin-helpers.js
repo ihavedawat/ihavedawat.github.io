@@ -46,7 +46,7 @@ export async function deleteAllUserDataForEmail(email) {
       await deleteDoc(d.ref);
     }
   } catch (err) {
-    console.error("Wallet purge failed for " + e, err);
+    console.error("Wallet delete failed for " + e, err);
   }
 
   const cols = ["orders", "walletHistory", "topups"];
@@ -98,22 +98,22 @@ export async function deleteAllUserDataForEmail(email) {
 }
 
 export async function deleteAllUsersData(token) {
-  // Use backend API for bulk purge (client-side purge violates Firestore rules)
-  if (!token) throw new Error('Token required for bulk purge');
+  // Use backend API for bulk delete (client-side delete violates Firestore rules)
+  if (!token) throw new Error('Token required for bulk delete');
 
-  const response = await fetch(window.location.origin + "/api/purgeAllUserData", {
+  const response = await fetch(window.location.origin + "/api/deleteAllUserData", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${token}`
     },
-    body: JSON.stringify({ purgeAll: true })
+    body: JSON.stringify({ deleteAll: true })
   });
 
   if (!response.ok) {
     const data = await response.json();
-    throw new Error(data.error || 'Failed to purge data');
+    throw new Error(data.error || 'Failed to delete data');
   }
 
-  return (await response.json()).totalPurged;
+  return (await response.json()).totalDeleted;
 }

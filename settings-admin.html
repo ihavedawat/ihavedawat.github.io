@@ -220,7 +220,7 @@
         wipeMsg.classList.remove("is-ok", "is-err");
 
         try {
-          // Purge all user data via backend API
+          // Delete all user data via backend API
           const token = await auth.currentUser?.getIdToken();
           if (!token) throw new Error('Not authenticated');
           const count = await deleteAllUsersData(token);

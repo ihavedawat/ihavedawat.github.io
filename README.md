@@ -151,7 +151,7 @@ dawat/
 │   ├── confirmTopup.js            # Admin: Confirm top-up
 │   ├── rejectTopup.js             # Admin: Reject top-up
 │   ├── wipeUserData.js            # Admin: Wipe all user data
-│   ├── purgeAllUserData.js        # Admin: Bulk purge all users
+│   ├── deleteAllUserData.js       # Admin: Bulk delete all users
 │   ├── sendAdminNotification.js   # Backend: Send admin notifications
 │   └── notifyTopupRequest.js      # Backend: Notify on topup requests
 │

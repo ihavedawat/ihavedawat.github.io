@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {},
   "dependencies": {
+    "dotenv": "^17.4.2",
     "firebase-admin": "^12.0.0"
   }
 }

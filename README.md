@@ -24,12 +24,15 @@ Set Firebase credentials (`GOOGLE_APPLICATION_CREDENTIALS`, `FIREBASE_PROJECT_ID
 
 ## Security
 
-- Server-side price validation
-- Atomic wallet transactions
-- Firestore security rules for data protection
-- No sensitive client-side operations
-- Admin operations require verified tokens
+- Server-side price validation (menu prices, order totals)
+- Atomic wallet transactions with strict validation
+- Firestore security rules block all unauthorized writes
+- Rate limiting (max 2 pending top-ups per user)
+- Top-up limits: 100-10,000 BDT
+- Admin operations require verified Firebase tokens
 - User ownership validated on all operations
+- Type checking prevents coercion attacks (1e100, strings, NaN)
+- Order items revalidated on edit against actual menu
 
 ## License
 

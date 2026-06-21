@@ -40,8 +40,8 @@
     </div>
 
     <script>
-      // Redirect all paths from GitHub Pages to Vercel
-      if (window.location.hostname === 'igotdawat.github.io') {
+      // Redirect all paths from GitHub Pages to Vercel (only when accessed directly, not when fetched as content)
+      if (window.location.hostname === 'igotdawat.github.io' && window.self === window.top) {
         const path = window.location.pathname;
         const search = window.location.search;
         const hash = window.location.hash;

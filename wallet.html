@@ -192,18 +192,18 @@
           const appDocRef = snap.empty ? null : snap.docs[0].ref;
           if (appData && appData.name) currentName = appData.name;
 
-          // Ensure userId is set on the application record for future topup/order operations
-          if (appDocRef && appData && !appData.userId) {
-            const { updateDoc } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
-            await updateDoc(appDocRef, { userId: user.uid });
-          }
-
           if (appData && (appData.status === "banned" || appData.status === "rejected" || appData.status === "pending")) {
             await signOut(auth); window.location.replace("/"); return;
           }
           if (appData && appData.mustChangePassword) {
             sessionStorage.setItem('mustChangePassword', 'true');
             window.location.replace("settings.html"); return;
+          }
+
+          // Ensure userId is set on the application record for future topup/order operations
+          if (appDocRef && appData && !appData.userId) {
+            const { updateDoc } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+            await updateDoc(appDocRef, { userId: user.uid });
           }
         } catch (err) {
           console.error("Could not load application doc:", err);

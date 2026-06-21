@@ -160,10 +160,22 @@
           await reauthenticateWithCredential(user, cred);
           await updatePassword(user, next);
 
-          // Clear the first-login flag so the dashboard unlocks.
+          // Clear the first-login flag via API endpoint (admin privileges)
           if (appDoc && appDoc.mustChangePassword) {
             try {
-              await updateDoc(doc(db, "applications", appDoc.id), { mustChangePassword: false });
+              const idToken = await user.getIdToken();
+              const response = await fetch('/api/auth', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${idToken}`
+                },
+                body: JSON.stringify({ action: 'clearPasswordFlag' })
+              });
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to clear password flag');
+              }
               appDoc.mustChangePassword = false;
             } catch (flagErr) {
               console.error("Could not clear mustChangePassword flag:", flagErr);

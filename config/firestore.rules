@@ -33,6 +33,7 @@ service cloud.firestore {
         request.resource.data.email != "" &&
         request.resource.data.diff({}).affectedKeys().hasOnly(['name', 'mobile', 'email', 'office', 'address', 'status', 'createdAt']);
       allow read: if true;
+      // Admin-only updates (including clearing mustChangePassword flag via API)
       allow update: if request.auth != null && isAdmin(request.auth.token.email);
       allow delete: if request.auth != null && isAdmin(request.auth.token.email);
     }

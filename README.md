@@ -31,27 +31,34 @@ Frontend (HTML/CSS/JS) → Vercel Functions (Node.js) → Firebase (Auth + Fires
 ## Project Structure
 
 ```
-├── api/                    # Vercel Functions
-│   ├── orders.js          # Order operations (place/edit/cancel)
-│   ├── topups.js          # Wallet top-ups
-│   ├── admin.js           # Admin operations & notifications
-│   ├── wallets.js         # Wallet debit/refund
-│   ├── error-handler.js   # Error standardization
-│   ├── firebase-init.js   # Admin SDK setup
-│   └── auth-middleware.js # Token verification
+├── api/                       # Vercel Functions (Node.js backend)
+│   ├── orders.js             # Order operations (place/edit/cancel with validation)
+│   ├── topups.js             # Wallet top-ups with rate limiting
+│   ├── wallets.js            # Wallet debit/refund with atomicity
+│   ├── admin.js              # Admin operations, notifications & user data wipe
+│   ├── error-handler.js      # Error standardization
+│   ├── firebase-init.js      # Admin SDK initialization
+│   ├── delete-user-data-helper.js  # User data deletion
+│   └── format-notification.js      # Notification formatting
 │
-├── js/                    # Client modules
-│   ├── firebase.js        # SDK initialization
-│   ├── wallet.js          # Wallet functions
-│   ├── notifications.js   # Notification system
-│   ├── admin-view.js      # Admin dashboard
-│   ├── icons.js           # Shared icons & constants
-│   └── app-utils.js       # Utilities
+├── js/                        # Client modules (Firebase SDK)
+│   ├── firebase.js           # SDK & project config
+│   ├── wallet.js             # Wallet & top-up operations
+│   ├── notifications.js      # Real-time notification system
+│   ├── admin-helpers.js      # Admin utility functions
+│   ├── admin-view.js         # Admin dashboard logic
+│   ├── admin-config.js       # Admin email whitelist
+│   ├── icons.js              # Shared ICONS & MONTHS constants
+│   ├── modal.js              # Dialog & modal UI
+│   ├── logger.js             # Centralized error logging
+│   └── app-utils.js          # Order/date utilities
 │
-├── *.html                 # Pages (user + admin)
-├── css/style.css         # Retro theme
-├── config/               # Firestore rules & indexes
-└── package.json          # Dependencies
+├── *.html                     # Pages (user + admin) with GitHub redirect
+├── 404.html                   # 404 page with dual-domain redirect
+├── css/style.css             # Retro gaming theme
+├── config/                   # Firestore security rules
+├── vercel.json               # URL rewrites & routing
+└── package.json              # Dependencies
 ```
 
 ## Setup
@@ -77,13 +84,25 @@ All sensitive operations validate prices server-side and use atomic transactions
 
 ## Security
 
-✅ All prices validated server-side against menu  
-✅ Wallet operations use atomic transactions  
-✅ Notifications only created by backend  
-✅ Client writes to sensitive collections blocked  
-✅ Type checking prevents string/number coercion attacks  
-✅ Admin operations require verified tokens  
-✅ User ownership validated on all operations
+**Input Validation:**
+✅ Server-side price validation against actual menu  
+✅ Type checking prevents string/number/array coercion attacks  
+✅ Finite number checks block Infinity and scientific notation (1e100)  
+✅ Order items revalidated on edit — prevents meal injection  
+✅ Positive-only values enforced — blocks negative refund exploits  
+
+**Data Protection:**
+✅ Wallet operations use atomic Firestore transactions  
+✅ Notifications created server-side only — prevents spoofing  
+✅ Client writes to wallets/meals/orders blocked by Firestore rules  
+✅ Rate limiting on top-ups (max 2 pending per user)  
+✅ Approval checks prevent unapproved users from accessing funds  
+
+**Admin & Access:**
+✅ All admin operations require verified Firebase ID tokens  
+✅ User ownership validated on every operation  
+✅ Wipe all user data via backend API (not client-exposed)  
+✅ GitHub Pages redirects to Vercel (igotdawat + ihavedawat)
 
 ## License
 

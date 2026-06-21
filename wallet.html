@@ -202,8 +202,12 @@
 
           // Ensure userId is set on the application record for future topup/order operations
           if (appDocRef && appData && !appData.userId) {
-            const { updateDoc } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
-            await updateDoc(appDocRef, { userId: user.uid });
+            try {
+              const { updateDoc } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js");
+              await updateDoc(appDocRef, { userId: user.uid });
+            } catch (updateErr) {
+              // Silently skip if it fails (will be set by API on order/topup)
+            }
           }
         } catch (err) {
           console.error("Could not load application doc:", err);

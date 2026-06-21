@@ -25,10 +25,18 @@ async function createTopupRequest(req, res, decodedToken) {
       return res.status(400).json({ error: 'You can only have 2 pending topup requests at a time' });
     }
 
-    const appSnap = await db.collection('applications')
+    let appSnap = await db.collection('applications')
       .where('userId', '==', userId)
       .limit(1)
       .get();
+
+    // Fallback to email query if userId not found (for new users before first order/topup)
+    if (appSnap.empty) {
+      appSnap = await db.collection('applications')
+        .where('email', '==', userEmail.toLowerCase())
+        .limit(1)
+        .get();
+    }
 
     if (appSnap.empty || appSnap.docs[0].data().status !== 'approved') {
       return res.status(403).json({ error: 'Your application is not approved yet' });

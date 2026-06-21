@@ -259,6 +259,10 @@ async function editOrder(req, res, userId, userEmail) {
       const prevTotal = Number(order.total || 0);
       const diff = total - prevTotal;
 
+      if (diff < 0) {
+        throw new Error('Cannot lower order total');
+      }
+
       const walletRef = db.collection('wallets').doc(userId);
       const walletSnap = await transaction.get(walletRef);
       const currentBalance = walletSnap.exists ? Number(walletSnap.data().balance || 0) : 0;

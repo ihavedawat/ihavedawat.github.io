@@ -7,12 +7,8 @@ async function createTopupRequest(req, res, decodedToken) {
   const userEmail = decodedToken.email;
   const { amount, bankRef } = req.body;
 
-  if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0 || amount > 1000000) {
+  if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
     return res.status(400).json({ error: 'Invalid amount' });
-  }
-
-  if (amount < 500 || amount > 50000) {
-    return res.status(400).json({ error: 'Amount must be between ৳500 and ৳50,000' });
   }
 
   if (!bankRef || typeof bankRef !== 'string') {
@@ -20,18 +16,6 @@ async function createTopupRequest(req, res, decodedToken) {
   }
 
   try {
-    const duplicate = await db.collection('topups')
-      .where('userId', '==', userId)
-      .where('amount', '==', amount)
-      .where('bankRef', '==', bankRef)
-      .where('status', '==', 'pending')
-      .limit(1)
-      .get();
-
-    if (!duplicate.empty) {
-      return res.status(400).json({ error: 'You already have a pending topup with this amount and reference' });
-    }
-
     const pendingTopups = await db.collection('topups')
       .where('userId', '==', userId)
       .where('status', '==', 'pending')

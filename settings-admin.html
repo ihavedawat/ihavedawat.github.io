@@ -101,7 +101,7 @@
       } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
       import { mountNotificationBell } from "./js/notifications.js";
       import { passwordConfirmDialog, alertDialog } from "./js/modal.js";
-      import { deleteAllUsersData } from "./js/admin-helpers.js";
+      import { purgeAllUsersData } from "./js/admin-helpers.js";
       import { show404 } from "./js/app-utils.js";
       import { ADMIN_EMAILS } from "./js/admin-config.js";
 
@@ -223,7 +223,7 @@
           // Delete all user data via backend API
           const token = await auth.currentUser?.getIdToken();
           if (!token) throw new Error('Not authenticated');
-          const count = await deleteAllUsersData(token);
+          const count = await purgeAllUsersData();
           wipeAllBtn.disabled = false;
           await alertDialog({
             title: "Wiped",

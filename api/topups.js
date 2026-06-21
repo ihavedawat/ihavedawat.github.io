@@ -10,11 +10,46 @@ async function createTopupRequest(req, res, decodedToken) {
   if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0 || amount > 1000000) {
     return res.status(400).json({ error: 'Invalid amount' });
   }
+
+  if (amount < 500 || amount > 50000) {
+    return res.status(400).json({ error: 'Amount must be between ৳500 and ৳50,000' });
+  }
+
   if (!bankRef || typeof bankRef !== 'string') {
     return res.status(400).json({ error: 'Invalid bank reference' });
   }
 
   try {
+    const duplicate = await db.collection('topups')
+      .where('userId', '==', userId)
+      .where('amount', '==', amount)
+      .where('bankRef', '==', bankRef)
+      .where('status', '==', 'pending')
+      .limit(1)
+      .get();
+
+    if (!duplicate.empty) {
+      return res.status(400).json({ error: 'You already have a pending topup with this amount and reference' });
+    }
+
+    const pendingTopups = await db.collection('topups')
+      .where('userId', '==', userId)
+      .where('status', '==', 'pending')
+      .get();
+
+    if (pendingTopups.size >= 2) {
+      return res.status(400).json({ error: 'You can only have 2 pending topup requests at a time' });
+    }
+
+    const appSnap = await db.collection('applications')
+      .where('userId', '==', userId)
+      .limit(1)
+      .get();
+
+    if (appSnap.empty || appSnap.docs[0].data().status !== 'approved') {
+      return res.status(403).json({ error: 'Your application is not approved yet' });
+    }
+
     const topupRef = await db.collection('topups').add({
       userId,
       userEmail: userEmail.toLowerCase(),

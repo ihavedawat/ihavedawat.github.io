@@ -40,12 +40,21 @@
     </div>
 
     <script>
-      // Redirect all paths from GitHub Pages to Vercel (only when accessed directly, not when fetched as content)
-      if (window.location.hostname === 'igotdawat.github.io' && window.self === window.top) {
-        const path = window.location.pathname;
-        const search = window.location.search;
-        const hash = window.location.hash;
-        window.location.href = `https://igotdawat.vercel.app${path}${search}${hash}`;
+      // Redirect both igotdawat and ihavedawat GitHub Pages to their respective Vercel apps
+      if (window.self === window.top) {
+        const hostname = window.location.hostname;
+        let vercelDomain = null;
+        if (hostname === 'igotdawat.github.io') {
+          vercelDomain = 'igotdawat.vercel.app';
+        } else if (hostname === 'ihavedawat.github.io') {
+          vercelDomain = 'ihavedawat.vercel.app';
+        }
+        if (vercelDomain) {
+          const path = window.location.pathname;
+          const search = window.location.search;
+          const hash = window.location.hash;
+          window.location.href = `https://${vercelDomain}${path}${search}${hash}`;
+        }
       }
     </script>
     <script src="../js/stars.js"></script>

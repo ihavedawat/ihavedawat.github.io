@@ -228,9 +228,9 @@
           wipeAllBtn.disabled = false;
           await alertDialog({
             title: "Wiped",
-            message: "All data for " + count + " user" + (count !== 1 ? "s" : "") + " has been deleted. Admin accounts remain intact."
+            message: "All user data has been deleted. Admin accounts remain intact."
           });
-          wipeMsg.textContent = "✓ Data wiped for " + count + " user(s).";
+          wipeMsg.textContent = "✓ Data wiped for all users";
           wipeMsg.classList.add("is-ok");
         } catch (err) {
           console.error(err);

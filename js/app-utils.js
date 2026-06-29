@@ -6,8 +6,8 @@
 export const ORDER_CONFIG = {
   OPEN_HOUR: 12,
   OPEN_MINUTE: 30,
-  CLOSE_HOUR: 22,
-  CLOSE_MINUTE: 0
+  CLOSE_HOUR: 23,
+  CLOSE_MINUTE: 59
 };
 
 // "YYYY-MM-DD" key for a Date in the user's local timezone.

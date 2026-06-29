@@ -77,7 +77,7 @@ export async function requestTopup({ userId, userEmail, amount, bankRef, note })
       "Content-Type": "application/json",
       "Authorization": `Bearer ${token}`
     },
-    body: JSON.stringify({ action: 'create', amount: amt, bankRef: String(bankRef || "").trim(), note: String(note || "").trim() })
+    body: JSON.stringify({ action: 'create', amount: amt, bankRef: String(bankRef || "").trim() })
   });
 
   if (!response.ok) {

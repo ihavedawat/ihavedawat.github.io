@@ -276,6 +276,7 @@
           }
           const btn = topupForm.querySelector("button[type=submit]");
           btn.disabled = true;
+          btn.innerHTML = '▶ Submitting<span class="loading-dots"><span></span><span></span><span></span></span>';
           try {
             const userEmail = (user.email || "").toLowerCase();
             await requestTopup({
@@ -292,7 +293,7 @@
             console.error(err);
             topupMsg.textContent = "Could not submit. Try again.";
             topupMsg.classList.add("is-err"); topupMsg.hidden = false;
-          } finally { btn.disabled = false; }
+          } finally { btn.disabled = false; btn.innerHTML = '▶ Submit top-up request'; }
         });
 
         // Live activity feed: pending/rejected top-ups + all wallet txns.

@@ -176,6 +176,7 @@
         if (!user) return;
         const submitBtn = pwForm.querySelector("button[type=submit]");
         submitBtn.disabled = true;
+        submitBtn.innerHTML = '▶ Updating<span class="loading-dots"><span></span><span></span><span></span></span>';
         try {
           const cred = EmailAuthProvider.credential(user.email, current);
           await reauthenticateWithCredential(user, cred);
@@ -200,6 +201,7 @@
           pwMsg.hidden = false;
         } finally {
           submitBtn.disabled = false;
+          submitBtn.innerHTML = '▶ Update password';
         }
       });
 
@@ -217,6 +219,7 @@
         if (!ok) return;
 
         wipeAllBtn.disabled = true;
+        wipeAllBtn.innerHTML = '▶ Wiping<span class="loading-dots"><span></span><span></span><span></span></span>';
         wipeMsg.hidden = true;
         wipeMsg.classList.remove("is-ok", "is-err");
 
@@ -226,6 +229,7 @@
           if (!token) throw new Error('Not authenticated');
           const count = await purgeAllUsersData();
           wipeAllBtn.disabled = false;
+          wipeAllBtn.innerHTML = '▶ Wipe all user data';
           await alertDialog({
             title: "Wiped",
             message: "All user data has been deleted. Admin accounts remain intact."
@@ -235,6 +239,7 @@
         } catch (err) {
           console.error(err);
           wipeAllBtn.disabled = false;
+          wipeAllBtn.innerHTML = '▶ Wipe all user data';
           await alertDialog({
             title: "Wipe failed",
             message: "Could not wipe user data. Try again."

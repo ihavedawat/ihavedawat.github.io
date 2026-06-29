@@ -155,6 +155,7 @@
         if (!user) return;
         const submitBtn = pwForm.querySelector("button[type=submit]");
         submitBtn.disabled = true;
+        submitBtn.innerHTML = '▶ Updating<span class="loading-dots"><span></span><span></span><span></span></span>';
         try {
           const cred = EmailAuthProvider.credential(user.email, current);
           await reauthenticateWithCredential(user, cred);
@@ -207,6 +208,7 @@
           pwMsg.hidden = false;
         } finally {
           submitBtn.disabled = false;
+          submitBtn.innerHTML = '▶ Update password';
         }
       });
 

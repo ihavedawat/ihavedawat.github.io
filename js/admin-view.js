@@ -801,9 +801,11 @@ async function handleAction(id, action, btn) {
     });
     if (!ok) return;
     btn.disabled = true;
+    btn.innerHTML = 'Wiping<span class="loading-dots"><span></span><span></span><span></span></span>';
     try {
       await purgeAllUserDataForEmail(email);
       btn.disabled = false;
+      btn.innerHTML = 'Wipe data';
       await alertDialog({
         title: "Wiped",
         message: "All data for " + name + (email ? " (" + email + ")" : "") + " has been deleted."
@@ -811,6 +813,7 @@ async function handleAction(id, action, btn) {
     } catch (err) {
       logError('action', err);
       btn.disabled = false;
+      btn.innerHTML = 'Wipe data';
       await alertDialog({
         title: "Wipe failed",
         message: "Could not wipe. Try again."

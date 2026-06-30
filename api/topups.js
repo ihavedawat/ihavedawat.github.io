@@ -94,6 +94,16 @@ async function createTopupRequest(req, res, decodedToken) {
       type: 'topup-requested'
     }).catch(() => {});
 
+    try {
+      await sendEmailUser(
+        'igotdawat@gmail.com',
+        'Top-up request',
+        `New top-up request\n\nFrom: ${byLabel}\nAmount: ৳${amount}\nBank ref: ${bankRef}\n\nPlease review in the admin panel.\n\nBest regards,\nDawat`
+      );
+    } catch (emailErr) {
+      console.error('Email send failed:', emailErr);
+    }
+
     return res.status(200).json({
       success: true,
       topupId: topupRef.id

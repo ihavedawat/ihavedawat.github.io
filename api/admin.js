@@ -2,6 +2,26 @@ import admin, { db } from './firebase-init.js';
 import { ADMIN_EMAILS } from '../js/admin-config.js';
 import { deleteUserDataByEmail } from './delete-user-data-helper.js';
 
+async function sendEmailUser(to, subject, body) {
+  try {
+    await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to }] }],
+        from: { email: 'igotdawat@gmail.com' },
+        subject,
+        content: [{ type: 'text/plain', value: body }]
+      })
+    });
+  } catch (err) {
+    console.error('Email error:', err);
+  }
+}
+
 async function deleteAllUserData(req, res, decodedToken) {
   const adminEmail = decodedToken.email;
   if (!ADMIN_EMAILS.map(e => e.toLowerCase()).includes((adminEmail || '').toLowerCase())) {
@@ -155,6 +175,16 @@ async function notifyNewApplication(req, res, decodedToken) {
       linkText: 'Review',
       type: 'application-new'
     }).catch(() => {});
+
+    try {
+    await sendEmailUser(
+      'igotdawat@gmail.com',
+      'New application received',
+      `New application submitted\n\nName: ${name}\nEmail: ${email}\nMobile: ${mobile}\n\nPlease review in the admin panel.\n\nBest regards,\nDawat`
+    );
+  } catch (emailErr) {
+    console.error('Email send failed:', emailErr);
+  }
 
     return res.status(200).json({ success: true });
   } catch (error) {

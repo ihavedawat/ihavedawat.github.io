@@ -2,6 +2,26 @@ import admin, { db } from './firebase-init.js';
 import { ADMIN_EMAILS } from '../js/admin-config.js';
 import { notifyAdminsInternal } from './admin.js';
 
+async function sendEmailUser(to, subject, body) {
+  try {
+    await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to }] }],
+        from: { email: 'igotdawat@gmail.com' },
+        subject,
+        content: [{ type: 'text/plain', value: body }]
+      })
+    });
+  } catch (err) {
+    console.error('Email error:', err);
+  }
+}
+
 async function createTopupRequest(req, res, decodedToken) {
   const userId = decodedToken.uid;
   const userEmail = decodedToken.email;
@@ -154,6 +174,15 @@ async function confirmTopup(req, res, decodedToken) {
       };
     });
 
+    try {
+      await sendEmailUser(
+        topupData.userEmail,
+        'Top-up confirmed',
+        `Your top-up of ৳${topupData.amount} has been confirmed.\n\nYour new wallet balance: ৳${result.balance}\n\nBest regards,\nDawat`
+      );
+    } catch (emailErr) {
+      console.error('Email send failed:', emailErr);
+    }
 
     return res.status(200).json(result);
   } catch (error) {
@@ -200,6 +229,17 @@ async function rejectTopup(req, res, decodedToken) {
         status: 'rejected'
       };
     });
+
+    try {
+      const topup = topupSnap.data();
+      await sendEmailUser(
+        topup.userEmail,
+        'Top-up declined',
+        `Your top-up request of ৳${topup.amount} has been declined.\n\nPlease contact support if you have questions.\n\nBest regards,\nDawat`
+      );
+    } catch (emailErr) {
+      console.error('Email send failed:', emailErr);
+    }
 
     return res.status(200).json(result);
   } catch (error) {
